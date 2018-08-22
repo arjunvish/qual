@@ -1,0 +1,327 @@
+\documentclass{article}
+\usepackage{proof}
+\usepackage{bussproofs}
+\begin{document}
+\title{Lazy Proofs for DPLL(T)-Based SMT Solvers}
+\date{}
+\maketitle
+\section{Introduction}
+SMT (satisfiability modulo theory) solvers input typically large 
+formulas that contain both Boolean Logic and logic in different 
+theories, and tell you whether the formulas are satisfiable or 
+unsatisfiable. \\
+Verification tools use these solvers to prove system properties. 
+As a result, solver output must be trustable. \\
+However, SMT solvers are really complicated tools that have tens 
+of thousands of lines of code. \\
+One solution to this is to have the SMT solver dispatch a 
+certificate of proof of its result. \\
+For satisfied formulas, this can be a model of satisfaction, 
+that is, values for all the variables in the formula. \\
+For unsatisfied formulas, it is a transformation of the formula
+into a siimple contradiction using a small set of inference rules, 
+checkable by an external tool such as a proof checker. \\
+\\
+Modern SMT solvers have a SAT solver to reason about Boolean 
+logic, and multiple theory solvers for reasoning in each of the 
+theories used. \\
+All these communicate with each other in subtle ways and 
+this must be accounted for while producing proofs. \\
+Proofs must also be fine-grained, that is, they must be 
+detailed enough so they can be checked by simple means. \\
+\\
+Contributions made in this paper:
+\begin{enumerate}
+	\item They formalize a \textit{generalized} approach
+	for fine-grained proof generation in DPLL(T)-style
+	SMT solvers.
+	\item They present a lazy approach of proof generation
+	that incurs a low overhead. While deriving a contradiction,
+	the solver generates many lemmas, most of which aren't 
+	ultimately used to derive the contradiction.
+	The proof generation only begins after the contradiction
+	is derived, so these unnecessary lemmas don't need to be
+	accounted for.
+	\item They present a lazy proof generation technique for
+	the specific theories of uninterpreted functions with
+	equality and the extensional theory of arrays.
+\end{enumerate}
+
+The technique was implemented in CVC4 and tested on the SMT-Lib
+benchmark library.
+
+\section{DPLL(T)-Based SMT Solvers}
+SMT is the problem of determining the satisfiability of a 
+set of formulas in some background theory T. \\
+This work focuses on quantifier-free formulas and on 
+DPLL(T) architecture solvers which combine a SAT engine and 
+multiple theory solvers.
+
+\subsection{Abstract DPLL(T) Framework}
+The background theory T consists of m theories $T_1,...,T_m$
+with respective many-sorted signatures $\Sigma_1,..,\Sigma_m$. \\
+A signature is defined as consisting of:
+\begin{itemize}
+	\item sort symbols.
+	\item predicate symbols with an associated arity.
+	\item function symbols with an associated arity.
+\end{itemize}
+
+In this setting, all signatures share the set of sort symbols 
+$\textbf{S}$, and equality is the only predicate. \\
+The theories share no function symbols except for a set 
+$C = \cup_{S \in \textbf{S}}\ C_S$, where each $C_S$ is a 
+distinguished infinite set of free/uninterpreted constants
+of sort $S$. Thus, the only elements that distinguish the 
+signatures are the constant symbols that don't belong to 
+$C$ and the non-nullary function symbols. \\ \\
+DPLL(T) solvers can be formalized abstractly as 
+state transition systems defined by a set of transition rules.\\
+The states of a system are either
+\begin{itemize}
+	\item $fail$
+	\item $\langle M, F, C \rangle$
+	where $M$ is the current context; $F$ is a set of ground clauses
+	representing some form of the input formula; $C$ represents the
+	conflict clause which may be the empty set when there isn't
+	a conflict.
+\end{itemize}
+If $M = M_0 \bullet M_1 \bullet ... \bullet M_n$, each $M_i$ is the
+decision level, and $M^{[i]}$ denotes $M_0 \bullet ... \bullet M_i$. \\
+Initial state : $\langle \phi, F_0, \phi \rangle$, where $F_0$ is 
+the input formula. \\
+Final state:
+\begin{itemize}
+	\item $fail$, when $F_0$ is unsatisfiable in T.
+	\item $\langle M, F, \Phi \rangle$ where $M$ is satisfiable in
+	T, $F$ is equisatisfiable with $F_0$ in T, and $M \models_P F$.
+\end{itemize}
+
+Each atom of a clause $F \cup C$ is pure, that is, it has a signature
+$\Sigma_i$ for some $i \in {1,...,m}$. \\
+$Int_M$ is the set of all \textit{interface literals} of M:
+the (dis)equalities between shared constants. \\
+\textit{Shared constants} are the set represented by \\
+$\{c | constant\ c\ occurs\ in\ Lit_{M|i} and Lit_{M|j}, for
+some 1 \leq i < j \leq m\}$. \\
+$Lit_{M|i}$ consists of the $\Sigma_i$- literals of $Lit_M$. \\
+In other words, $Int_M$ is the set of (dis)equalities between
+elements of $C$.\\
+\\
+Transition rules:
+\begin{itemize}
+	\item Propagate:\\ $\infer[Prop]{M := Ml}{l_1 \lor ... \lor l_n \lor l \in F 
+	& \neg l_1,...,\neg l_n \in M & l, \neg l \notin M}$ \\
+	If all but one literal in a clause have been negated in the 
+	current context, positively assigned the last literal to satisfy
+	the clause.
+	\item Decide:\\ $\infer[Dec]{M := M \bullet l}
+	{l \in Lit_F \cup Int_M & l, \neg l \notin M}$ \\
+	Pick an unassigned literal either from the formula $F$, or
+	from the interface literals and assign it positively.
+	\item Conflict:\\ $\infer[Confl]{C:=\{l_1 \lor ... \lor l_N\}}
+	{C = \phi & l_1 \lor ... \lor l_n \in F & \neg l_1,...,\neg l_n \in M}$ \\
+	If there is a clause in F, all of whose literals have been negated by
+	the current context, then that clause is the conflict clause.
+	\item Explain:\\ $\infer[Expl]{C := \{l_1 \lor ... \lor l_n \lor D\}}
+	{C = \{\neg l \lor D\} & l_1 \lor ... \lor l_n \lor l \in F 
+		& \neg l_1,...,\neg l_n \prec_M l}$ \\
+	If there is a clause in F that contains n literals that were 
+	assigned in the context before the literal l was assigned,
+	such that l occurs in the conflict clause, resolve these two 
+	clauses to get the new conflict clause.
+	\item Backjump:\\ $\infer[Backj]{C := \phi\ \ \ M := M^{[i]}l}
+	{C = \{l_1 \lor ... \lor l_n \lor l\} & 
+		lev\ \neg l_1, ... , lev\ \neg l_n \leq i < lev\ \neg l}$ \\
+	If one literal in the conflict clause is in a level strictly above 
+	the levels of all other literals in M, then rewind the context to any
+	level in between these two levels.
+	\item Learn: \\ $\infer[Learn]{F := F \cup C}{C \neq \phi}$ \\
+	If there is a conflict clause, it is entailed by input formula, 
+	so add it to the set of clauses to satisfy $F$.
+	\item Fail:\\ $\infer[Fail]{fail}{C \neq \phi & \bullet \notin M}$ \\
+	If there is a conflict, and there are no decision points to 
+	backjump on, then move to the fail state, that is, the input 
+	formula is unsatisfiable.
+\end{itemize}
+The rules above model the behavior of the SAT engine, which treats atoms
+as Boolean variables. The rules that follow model the interaction between 
+the SAT solver and the theory solvers.
+\begin{itemize}
+	\item $Propagate_i$ \\ $\infer[Prop_i]{M := Ml}	{l \in Lit_F \cup Int_M & 
+		\models_i l_1 \lor ... \lor 
+		l_n \lor l & \neg l_1, ..., \neg l_n \in M & l,\neg l \notin M}$ \\
+	If all but one literal of a theory-i lemma are falsified by the 
+	current context, and the one literal is unassigned and also belongs to 
+	either the literals in F or the interface literals in M, then
+	positively assign the one literal.
+	\item $Conflict_i$ \\ $\infer[Confl_i]{C := \{l_1 \lor ... \lor l_n \}}
+	{C = \phi & \models_i l_1 \lor ... \lor l_n & 
+		\neg l_1, ..., \neg l_n \in M}$ \\
+	If all the literals of a theory-i lemma are falsified by the 
+	current context, then the lemma is a conflict clause.
+	\item $Explain_i$ \\ $\infer[Expl_i]{C := \{l_1 \lor ... \lor l_n \lor D\}}
+	{C = \{\neg l \lor D\} & \models_i l_1 \lor ... \lor l_n \lor l & 
+		\neg\ l_1, ..., \neg\ l_n \prec_M l}$ \\
+	If one of the literals $l$ in the conflict clause occurs in a 
+	theory-i lemma such that the negations of all other literals in 
+	that lemma were assigned in the current context before l was  
+	assigned positive, then resolve the conflict clause and the 
+	theory lemma.
+	\item $Learn_i$ \\ $\infer[Learn_i]{F := F \cup \{l_1[\textbf{c}] 
+		\lor ... \lor l_n[\textbf{c}]\}}
+	{l_1,...,l_n \in Lit_{M|i} \cup Int_M \cup L_i & 
+		\models_i \exists \textbf{x}(l_1[\textbf{x}] \lor ... 
+		\lor l_n[\textbf{x}])}$ \\ where $\textbf{x}$ is a possibly empty 
+	tuple of variables, and $\textbf{c}$ is a tuple of fresh constants 
+	from $C$ - the set of shared constants between the sorts - of the
+	same sort as $\textbf{x}$; $L_i$ is a finite set consisting of literals
+	not present in the original formula $F$. \\
+	If a theory-i lemma is valid for some tuple $\textbf{x}$ of variables,
+	instantiate it with a corresponding tuple of constants $\textbf{c}$,
+	and add it to F.
+\end{itemize}
+The rules maintain the invariant that every conflict clause and learned 
+clause is entailed in T by the initial clause set. \\
+
+\subsection{Modeling Solver Behavior}
+Generally speaking, the system uses the SAT engine - rules $Propagate$, 
+$Decide$, $Conflict$, $Explain$, $Backjump$, $Learn$, and $Fail$ - to 
+construct the context $M$ as a truth assignment for the clauses in $F$, 
+as if those clauses were propositional. However, it periodically asks 
+the solver of each theory $T_i$
+\begin{itemize}
+	\item to check if the set of $\Sigma_i$- constraints in $M$ is 
+	unsatisfiable in $T_i$ using the $Conflict_i$ rule, or
+	\item to check if the set of $\Sigma_i$- constraints in M entails
+	yet-undetermined literal from $Lit_F \cup Int_M$ using the 
+	$Propagate_i$ or the $Explain_i$ rule.
+\end{itemize}
+We assume that each $T_i$- solver provides an ${\tt explain_i}$ method
+with the property that if $l$ is a literal propagated by the solver, 
+then ${\tt explain_i}(l)$ returns a subset $\{\neg l_1, \neg l_2, 
+..., \neg l_n\}$ of $M$, such that $\models_i l_1 \lor 
+... \lor l_n \lor l$. This way, we can use the $Explain_i$ rule on
+literals that have been propagated by theory lemmas, to rewind 
+theory propagations and get to decisions.\\
+For $i = 1,...,m$ the set $Lit_{M|i}$ consists of the $\Sigma_i$- 
+literals of $Lit_M$. \\
+
+The set $Lit_F$ (resp., $Lit_M$) consist of all literals in F 
+(resp., in M) and their complements. For $i = 1,...,m$, the 
+set $L_{M|i}$ consists of the $\Sigma_i$-literals of $Lit_M$.
+$Int_M$ is the set of all $\textit{interface literals}$ of M: 
+the (dis)equalities between $\textit{shared constants}$, where
+the set of shared constants is  \\ $\{c$ $|$ constant $c$ occurs in 
+$Lit_{M|i}$, and $Lit_{M|j}$, for some $1 \leq i < j \leq m\}$.
+The inclusion of $Int_M$ in rules $Decide$ and $Propagate_i$ 
+achieves the effect of the Nelson-Oppen theory combination method.
+
+For example, consider the following formula. \\
+F : $1 \leq x \land x \leq 2 \land f(x) \neq f(2) \land x = 1$.
+The theories involved in this formula are the theory of equality
+over uninterpreted functions (E) and the theory of linear integer
+arithmetic (Z). Literals here aren't pure, that is, they belong to 
+more than a single theory. To change that, variables are abstracted: \\
+F : $a \leq x \land x \leq b \land f(x) \neq f(b) \land x = a 
+\land a = 1 \land b = 2$. \\
+$Lit_F = \{a \leq x ,\ x \leq b ,\ f(x) \neq f(b) ,\ x = a 
+,\ a = 1 ,\ b = 2\}$ \\
+$L_{F|E} = \{f(x) \neq f(b),\ x = a\}$ \\
+$L_{F|Z} = \{a \leq x ,\ x \leq b ,\ x = a,\ a = 1 ,\ b = 2\}$\\
+$Shared\ constants = \{a,\ x,\ b\}$\\
+$Int_F = \{x = a\}$\\
+
+Rule $Learn_i$ models theory solvers following the 
+splitting-on-demand paradigm. When asked about the satisfiability of 
+the set of $\Sigma_i$-literals in M, such solvers may return instead 
+a $\textit{splitting lemma}$ - a clause encoding a guess that needs 
+to be made about those literals before the solver can determine 
+their satisfiability. The set $L_i$ is a finite set consisting of 
+additional literals, that is, not present in the original formula 
+in F, which may be generated by splitting-on-demand theory solvers.\\
+For example, when the array solver is asked whether the following is
+satisfiable:\\
+$read(write(A,i,v),j) = read(A,j)$\\
+it returns the following splitting lemma:\\
+$read(write(A,i,v),j) \neq read(A,j) \lor i \neq j 
+\lor read(A,i) = v$.\\
+In other words, the equation $read(write(A,i,v),j)=read(A,j)$ holds
+in 2 situations: when $i$ and $j$ are distinct, or when they are
+equal but $write(A,i,v)$ changes nothing.
+
+\section{Generating Proofs in DPLL(T)}
+The transition rules defined above are refutation sound: if an 
+execution starting with $\langle \phi, F_0, \phi \rangle$ ends with 
+$fail$, then $F_0$ is unsatisfiable in $T$.
+
+\subsection{Proof Generation for Propositional Unsatisfiability}
+A failed execution can be understood as trying to construct a 
+refutation tree: a tree of clauses built from the leaves,
+which are either clauses in $F_0$ or learned clauses, down to
+the root $\bot$, where each non-leaf node is a 
+propositional resolvent of its children. Additionally, one
+needs to prove that each learned clause is a consequence of 
+the initial clause set.
+
+For example, consider the formula F in CNF expressed as the set:\\
+$\{a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b\}$
+\begin{center}
+	\begin{tabular}{l l l l l}
+		\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} & \textbf{Step}\\
+		\hline
+		& $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Dec & 1 \\
+		$\bullet a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Prop ($a \lor \neg b$) & 2 \\
+		$\bullet a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Prop $(b \lor c)$ & 3 \\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Confl $(\neg c \lor b)$ & 4 \\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 5 \\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $b$ & Expl $(\neg a \lor \neg b)$ & 6 \\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\neg a$ & Learn $(\neg a)$ & 7\\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\neg a$ & Backj $(\neg a)$ & 8 \\
+		$\neg a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\phi$ & Prop $(a \lor \neg b)$ & 9 \\
+		$\neg a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\phi$ & Prop $(b \lor c)$ & 10 \\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\phi$ & Confl $(\neg c \lor b)$ & 11 \\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 12 \\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $b$ & Expl $(a \lor \neg b)$ & 13\\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $a$ & Expl $(\neg a)$ & 14 \\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\bot$ & Fail & 15 \\
+	\end{tabular}
+\end{center}
+The following is a proof tree for the unsatisfiability of F.
+\begin{prooftree}
+	\AxiomC{$\neg c \lor b$ (4)}
+	\AxiomC{$b \lor c$ (5)}
+	\BinaryInfC{$b$}
+	\AxiomC{$\neg a \lor \neg b$ (6)}
+	\BinaryInfC{$\neg a$ (14)}
+	\AxiomC{$\neg c \lor b$ (11)}
+	\AxiomC{$b \lor c$ (12)}
+	\BinaryInfC{$b$}
+	\AxiomC{$a \lor \neg b$ (13)}
+	\BinaryInfC{$a$}
+	\BinaryInfC{$\bot$}
+\end{prooftree}
+Steps 1 to 7 constitute the left subtree of the proof tree that
+adds $\neg a$ as a learned clause to F. Steps 8 to 14 constitute 
+the left subtree of the proof tree.
+Conflict clauses and explanations represent propositional resolution
+between clauses and the proof tree has a node for every application 
+of the Conflict and the Explain rules, and one at the root for the 
+Fail rule.
+
+\subsection{Proof Generation for Unsatisfiability Modulo Theories}
+The non-propositional rules are can also be seen as trying to
+construct a refutation tree. However, in addition to clauses from 
+the initial formula, and clauses that are propositionally learned,
+leaves can have additional clauses that are valid in the particular
+theory - these are called \textit{theory lemmas}. \\
+The rules $Conf_i$, $Learn_i$, and $Expl_i$ add theory lemmas 
+to the refutation proof tree, while $Prop_i$ uses theory lemmas to 
+propagate literals. \\
+The theory lemmas added to the proof tree must be proven, and this 
+is done by the corresponding theory solver. Each $T_i$-solver 
+provides a method $\tt{provideProof_i}$ that takes as input 
+a theory lemma and returns a proof of that lemma using theory 
+specific proof rules.  
+
+\end{document}

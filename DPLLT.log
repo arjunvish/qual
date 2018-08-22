@@ -1,0 +1,208 @@
+This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016) (preloaded format=pdflatex 2018.5.21)  14 AUG 2018 19:08
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**DPLLT.tex
+(./DPLLT.tex
+LaTeX2e <2016/03/31>
+Babel <3.9r> and hyphenation patterns for 77 language(s) loaded.
+(/usr/share/texlive/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2014/09/29 v1.4h Standard LaTeX document class
+(/usr/share/texlive/texmf-dist/tex/latex/base/size10.clo
+File: size10.clo 2014/09/29 v1.4h Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/usr/share/texlive/texmf-dist/tex/latex/lkproof/proof.sty
+\inferLineSkip=\dimen103
+\inferLabelSkip=\dimen104
+\@LeftOffset=\dimen105
+\@RightOffset=\dimen106
+\@SavedLeftOffset=\dimen107
+\UpperWidth=\dimen108
+\LowerWidth=\dimen109
+\LowerHeight=\dimen110
+\UpperLeftOffset=\dimen111
+\UpperRightOffset=\dimen112
+\UpperCenter=\dimen113
+\LowerCenter=\dimen114
+\UpperAdjust=\dimen115
+\RuleAdjust=\dimen116
+\LowerAdjust=\dimen117
+\RuleWidth=\dimen118
+\HLabelAdjust=\dimen119
+\VLabelAdjust=\dimen120
+\WidthAdjust=\dimen121
+\@UpperPart=\box26
+\@LowerPart=\box27
+\@LabelPart=\box28
+\ResultBox=\box29
+)
+(/usr/share/texlive/texmf-dist/tex/latex/bussproofs/bussproofs.sty
+Proof Tree (bussproofs) style macros. Version 1.1.
+\theLevel=\count87
+\myMaxLevel=\count88
+\myBoxA=\box30
+\myBoxB=\box31
+\myBoxC=\box32
+\myBoxD=\box33
+\myBoxLL=\box34
+\myBoxRL=\box35
+\thisAboveSkip=\dimen122
+\thisBelowSkip=\dimen123
+\newScoreStart=\dimen124
+\newScoreEnd=\dimen125
+\newCenter=\dimen126
+\displace=\dimen127
+\leftLowerAmt=\dimen128
+\rightLowerAmt=\dimen129
+\scoreHeight=\dimen130
+\scoreDepth=\dimen131
+\htLbox=\dimen132
+\htRbox=\dimen133
+\htRRbox=\dimen134
+\htRRRbox=\dimen135
+\htAbox=\dimen136
+\htCbox=\dimen137
+) (./DPLLT.aux)
+\openout1 = `DPLLT.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 4.
+LaTeX Font Info:    ... okay on input line 4.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 7.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 7.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 7.
+
+
+LaTeX Warning: No \author given.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 9--34
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 9--34
+
+ []
+
+[1
+
+{/usr/share/texlive/texmf-dist/fonts/map/pdftex/updmap/pdftex.map}]
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 61.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 61.
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 65.
+
+(/usr/share/texlive/texmf-dist/tex/latex/base/omscmr.fd
+File: omscmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
+)
+LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 65.
+
+Underfull \hbox (badness 10000) in paragraph at lines 70--81
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 100--112
+
+ []
+
+[2] [3]
+Underfull \hbox (badness 10000) in paragraph at lines 184--186
+
+ []
+
+[4]
+Underfull \hbox (badness 10000) in paragraph at lines 200--209
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 220--234
+
+ []
+
+
+Overfull \hbox (10.75822pt too wide) in paragraph at lines 235--252
+[]\OT1/cmr/m/n/10 Rule $\OML/cmm/m/it/10 Learn[]$ \OT1/cmr/m/n/10 mod-els the-o
+ry solvers fol-low-ing the splitting-on-demand paradigm.
+ []
+
+[5]
+\myBox1=\box36
+\myScoreStart1=\dimen138
+\myCenter1=\dimen139
+\myScoreEnd1=\dimen140
+\myBox2=\box37
+\myScoreStart2=\dimen141
+\myCenter2=\dimen142
+\myScoreEnd2=\dimen143
+\myBox3=\box38
+\myScoreStart3=\dimen144
+\myCenter3=\dimen145
+\myScoreEnd3=\dimen146
+
+Overfull \hbox (40.56728pt too wide) in paragraph at lines 291--303
+ [] 
+ []
+
+[6]
+Overfull \hbox (8.21584pt too wide) in paragraph at lines 313--326
+\OT1/cmr/m/n/10 the cor-re-spond-ing the-ory solver. Each $\OML/cmm/m/it/10 T[]
+$\OT1/cmr/m/n/10 -solver pro-vides a method $[]$
+ []
+
+[7] (./DPLLT.aux) ) 
+Here is how much of TeX's memory you used:
+ 485 strings out of 493069
+ 5663 string characters out of 6138237
+ 66067 words of memory out of 5000000
+ 4077 multiletter control sequences out of 15000+600000
+ 8745 words of font info for 32 fonts, out of 8000000 for 9000
+ 1137 hyphenation exceptions out of 8191
+ 23i,13n,19p,153b,193s stack positions out of 5000i,500n,10000p,200000b,80000s
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx
+12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
+></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/
+share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/t
+exlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/share/texlive/
+texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-di
+st/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fon
+ts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type
+1/public/amsfonts/cm/cmti10.pfb></usr/share/texlive/texmf-dist/fonts/type1/publ
+ic/amsfonts/cm/cmtt10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/ams
+fonts/cm/cmtt8.pfb>
+Output written on DPLLT.pdf (7 pages, 153049 bytes).
+PDF statistics:
+ 76 PDF objects out of 1000 (max. 8388607)
+ 54 compressed objects within 1 object stream
+ 0 named destinations out of 1000 (max. 500000)
+ 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+
