@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{proof}
+\usepackage{bussproofs}
+\usepackage{xcolor}
+\begin{document}
+\title{Proofs and Proofs Formats for SMT Solvers}
+\author{Arjun Viswanathan}
+\date{}
+\maketitle
+
+\begin{abstract}
+Satisfiability Modulo Theories (SMT) solvers input typically
+large formulas that contain both Boolean logic and logic in 
+different theories - such as arithmetic - and decide whether 
+the formulas are satisfiable or unsatisfiable. Verification 
+tools use these solvers to prove system properties. As a 
+result, solver output must be trustable. However, SMT solvers 
+are really complicated tools that have tens of thousands of lines of code. For satisfied formulas, this can be a model of 
+satisfaction, that is, values for all the variables in the
+formula. For unsatisfied formulas, it is a transformation of 
+the formula into a simple contradiction using a small set of 
+inference rules, checkable by an external tool such as a proof 
+checker. This report describes the proof producing mechanisms 
+used by most SMT solvers and compares the proof formats of 
+VeriT and CVC4, two state-of-the-art SMT solvers.
+\end{abstract}
+
+\section{Introduction}
+Boolean satisfiability\textcolor{red}{REF}, often called the SAT problem, 
+is the problem of satisfying a Boolean formula, that is, 
+consistently assigning values of True or False to the variables 
+of the formula so that the entire formula evaluates to True. 
+For example, \\ 
+$(x \lor y) \land z$ \\
+can be satisfied by the 
+assignment $\{x=True,y=False,z=True\}$. On the other hand, \\
+$x \land \neg x$ \\
+is unsatisfiable, no matter what value is assigned to $x$.
+
+Satisfiability Modulo Theories\textcolor{red}{REF} or SMT lifts SAT to a level 
+that includes theories. For example, \\
+$(a = b) \land (b = c) \land \neg (a = c)$ \\
+is a formula that is unsatisfiable in the theory of 
+equality over uninterpreted functions. This is because, by
+transitivity of $a = b$ and $b = c$, we have $a = c$. SMT 
+allows us to be more expressive with our formulas, but 
+this comes at the cost of more complicated decision 
+procedures.
+
+SMT solvers have plenty of applications in formal methods 
+and software verification. For instance, SMT solvers are used 
+in the back-end of model checkers\textcolor{red}{REF}, which input mathematical 
+models of a software system, and verify whether they 
+satisfy a particular property or not. Another area of 
+application is symbolic execution\textcolor{red}{REF}, which is to analyze a 
+program to figure out what set of inputs work for each 
+part of the program. Other uses of SMT solvers include 
+program synthesis\textcolor{red}{REF}, static analysis, 
+and interpolant generation\textcolor{red}{REF}.
+
+Given their rise in popularity and usage in the software 
+verification world, it is really important that we are able 
+to trust the outputs of SMT solvers. SMT solvers are typically 
+very complex systems with tens of thousands of lines of code, 
+liable to contain bugs. Verifying such a large codebase can 
+be a cumbersome, if not impossible task. An alternative is 
+to rely on tools called proof checkers\textcolor{red}{REF}, 
+that have a much more trusted kernel that contain a small 
+set of axioms and inference rules. These proof checkers 
+sacrifice in automative capability what they gain in terms 
+of trustability over SMT solvers. To exploit these proof 
+checkers, SMT solvers produce proof certificates of their 
+outputs, that can be checked by the proof checker.
+
+In this report, I introduce the workings of an SMT solver 
+and their proof producing capabilities; I also compare the 
+proof formats of CVC4 and VeriT, two state-of-the-art SMT solvers. I begin by explain the algorithm that is at the core 
+of most SMT solvers. I then explain the logical basis for 
+proof production in SMT solvers, and then discuss the proof 
+formats of the individual solvers.
+\end{document}
