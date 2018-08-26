@@ -78,4 +78,291 @@ proof formats of CVC4 and VeriT, two state-of-the-art SMT solvers. I begin by ex
 of most SMT solvers. I then explain the logical basis for 
 proof production in SMT solvers, and then discuss the proof 
 formats of the individual solvers.
+
+
+\section{Formal Preliminaries}
+The following grammar specifies the formulas we will use: \\ 
+$Variable\ \rightarrow\ x\ |\ y\ |\ ... $ \\
+$Constant\ \rightarrow\ c_1\ |\ c_2\ |\ ... $ \\
+$Term\ \rightarrow\ Variable\ | Constant | f(t_1, ..., t_n)$ \\
+$Literal\ \rightarrow\ Term | \neg Term$ \\
+$Formula\ \rightarrow\ True | False | p(t_1, ..., t_n) | Literal | 
+Literal \lor Literal | Literal \land Literal$ \\ 
+$| Literal \Rightarrow Literal | Literal \iff Literal$ \\
+where $f$ is a function symbol and $p$ is a predicate symbol.
+
+Our setting consists of a background theory T consisting 
+of m theories $T_1, ..., T_m$ with respective many-sorted 
+signatures $\Sigma_1, ..., \Sigma_m$. All signatures share 
+a set of sort (type) symbols, and equality is the only 
+predicate. The theories also share a set of 
+uninterpreted constants which are used for reasoning about 
+terms that belong to multiple theories.
+
+This means that formulas are composed of Boolean components, 
+each of which will evaluate to True or False. However, since 
+we have theories, these components could be simple Boolean 
+variables, or they could be (dis)equalities over our 
+multiple theories, which gives us expressivity. For example, \\
+$(x \land y) \Rightarrow (a = 0 \land a + b = c \land 
+\neg (f(b) = f(c)))$ \\
+is a formula over the theories of arithmetic and equality 
+over uninterpreted functions. $x$ and $y$ are terms in the 
+formula, and hence can only evaluate to True or False.
+$a$, $b$, and $c$, on the other hand, are integer variables 
+that must evaluate to an integer constant.
+
+We also allow for representation of formulas that are 
+conjunctions of conjuncts, as sets of the corresponding 
+conjuncts. So we represent $c_1 \land ... \land c_n$ as
+$\{c_1, ..., c_n\}$. This is a useful representation, 
+since conjunction is commutative, associative, and 
+repeating the number of times a conjunct occurs in a 
+conjunction doesn't change the meaning of that conjunction, 
+it only adds redundancy.
+
+\textcolor{red}{Entailment}
+\textcolor{red}{Equisatisfiability}
+
+
+\section{CNF Conversion}
+SMT solvers require that the input formula is converted to a 
+normal form called conjunctive normal form (CNF), before they 
+start solving them. The CNF of a formula represents the 
+formula as a conjunction of disjunctions. A clause is a 
+disjunction (Boolean OR) of variables. So CNF is a 
+conjunction (Boolean AND) of clauses. 
+
+Using Tseitin clausification\textcolor{red}{REF}, any formula 
+can be converted into an equisatisfiable CNF formula 
+in linear time. Formulas F and G are equisatisfiable if 
+every model that satisfies F also satisfies G and vice-versa.
+
+The following is an example where a set of rewrite rules
+are applied to F to convert it into CNF. \\
+$F: a \Rightarrow (b \land c)$ \\
+$Step\ 1: a \Rightarrow x_1 \land (x_1 \iff (b \land c))$ \\
+$Step\ 2: x_2 \land (x_2 \iff a \Rightarrow x_1) \land 
+(x_1 \iff (b \land c))$ \\
+$Step\ 3: x_2 \land \\
+(x_2 \Rightarrow (a \Rightarrow x_1) \land 
+(a \Rightarrow x_1) \Rightarrow x_2) \land \\
+(x_1 \Rightarrow (b \land c) \land 
+(b \land c) \Rightarrow x_1)$ \\
+$Step\ 4: x_2 \land \\
+(\neg x_2 \lor \neg a \lor x_1) \land 
+(a \lor x_2) \land (\neg x_1 \lor x_2) \land \\
+(\neg x_1 \lor b) \land (\neg x_1 \lor c) \land 
+(\neg b \lor \neg c \lor x_1)$ \\
+Steps 1 and 2 involve introducing fresh variables $x_1$
+and $x_2$ for all subterms of F by means of equivalence 
+between the subterm and the fresh variable. Steps 3 and 4 
+reduce these subterms to CNF by common rewrite rules 
+such as distribution and De Morgan's law.
+
+
+\section{DPLL(T)}
+DPLL(T) tries to satisfy the input formula - converted to 
+CNF - by assigning truth values to terms so that it can
+satisfy all input clauses. It is easy to satisfy a single
+clause, because to satisfy a disjunction, it suffices to
+assign one of the disjuncts to True. DPLL(T) carries out
+assignments through logical reasoning, or by guessing. If a
+guess leads to an unsuccessful assignment of the formula 
+(a conflict), then the algorithm reverses the guess. 
+If there are no more guesses to reverse, then the formula is
+unsatisfiable.
+
+DPLL(T) solvers can be formalized abstractly as 
+state transition systems defined by a set of transition rules.\\
+The states of a system are either
+\begin{itemize}
+	\item $fail$
+	\item $\langle M, F, C \rangle$
+\end{itemize}
+$M$ is the current context, that is it is the current 
+assignment of literals in the formula; a literal in M is 
+preceded by a $\bullet$ if the literal was a decision, 
+that is, it was guessed. 
+If $M = M_0 \bullet M_1 \bullet ... \bullet M_n$, 
+each $M_i$ is the decision level, and $M^{[i]}$ 
+denotes $M_0 \bullet ... \bullet M_i$. \\
+$F$ is a set of clauses representing some form of
+the input formula in CNF. $C$ represents the conflict clause,
+the clause from $F$ that is falsified by the assignment. \\
+Initial state : $\langle \phi, F_0, \phi \rangle$, where $F_0$
+is the input formula converted to CNF. \\
+Final state:
+\begin{itemize}
+	\item $fail$, when $F_0$ is unsatisfiable in T.
+	\item $\langle M, F, \Phi \rangle$ where $M$ is satisfiable in
+	T, $F$ is equisatisfiable with $F_0$ in T, and $M \models_P F$.
+\end{itemize}
+
+%Each atom of a clause $F \cup C$ is pure, that is, it has a signature
+%$\Sigma_i$ for some $i \in {1,...,m}$.
+$Int_M$ is the set of all \textit{interface literals} of M:
+the (dis)equalities between shared constants. \\
+\textit{Shared constants} are the set represented by \\
+$\{c\ |\ constant\ c\ occurs\ in\ Lit_{M|i} and Lit_{M|j}, 
+for\ some 1 \leq i < j \leq m\}$. \\
+$Lit_{M|i}$ consists of the $\Sigma_i$- literals of $Lit_M$. \\
+These technicalities are necessary for solving of clauses 
+that are a combination of multiple theories. 
+For example, the term \\
+$f(a) = 1 + x$ \\
+combines the theory of equality over uninterpreted functions,
+and that of arithmetic. Since each theory has its own solver,
+this term that uses functions from both theories, must be 
+purified for each theory solver, and this is done by means of
+a shared constant. If the term is replaced by the following 
+terms, \\
+$f(a) = s_1, s_1 = 1 + x$ \\
+we now have one term that is entirely over uninterpreted 
+functions, and one over arithmetic ones. \\
+Transition rules:
+\begin{itemize}
+	\item Propagate:\\ $\infer[Prop]{M := Ml}{l_1 \lor ... \lor l_n \lor l \in F 
+		& \neg l_1,...,\neg l_n \in M & l, \neg l \notin M}$ 
+	\item Decide:\\ $\infer[Dec]{M := M \bullet l}
+	{l \in Lit_F \cup Int_M & l, \neg l \notin M}$ \\
+	\item Conflict:\\ $\infer[Confl]{C:=\{l_1 \lor ... \lor l_N\}}
+	{C = \phi & l_1 \lor ... \lor l_n \in F & \neg l_1,...,\neg l_n \in M}$ 
+	\item Explain:\\ $\infer[Expl]{C := \{l_1 \lor ... \lor l_n \lor D\}}
+	{C = \{\neg l \lor D\} & l_1 \lor ... \lor l_n \lor l \in F 
+		& \neg l_1,...,\neg l_n \prec_M l}$
+	\item Backjump:\\ $\infer[Backj]{C := \phi\ \ \ M := M^{[i]}l}
+	{C = \{l_1 \lor ... \lor l_n \lor l\} & 
+		lev\ \neg l_1, ... , lev\ \neg l_n \leq i < lev\ \neg l}$
+	\item Learn: \\ $\infer[Learn]{F := F \cup C}{C \neq \phi}$
+	\item Fail:\\ $\infer[Fail]{fail}{C \neq \phi & \bullet \notin M}$
+\end{itemize}
+The rules above model the behavior of the SAT engine, which treats atoms
+as Boolean variables. Propagations allow us to assign 
+literals that we are forced to assign by the logic. We 
+might not always have this luxury; sometimes, we may have 
+to make a guess on an assignment, and decisions let us do 
+that. Propogations and/or decisions could lead us to 
+a point where our current assignment conflicts with 
+our goal of trying to satisfy the input formula. The 
+Conflict rule recognizes this. If we encounter a conflict, 
+and there were no previous decisions made, then we were 
+forced by the logic to arrive at that conflict, so we 
+conclude that the input formula is unsatisfiable. The Fail 
+rule ensures this. If, there are previous decisions at
+the time of conflict, then the Explain rule undoes 
+propagations on top of conflicts, so we can get to a 
+potentially wrong decision that we made, so we
+can take the path down the opposite guess. Flipping a guess 
+is handled by the Backjump rule. A conflict clause always 
+consists of a formula that is entailed by the input formula. 
+Explanations could have actually transformed the conflict 
+clause into something that we didn't know that could actually
+help us with future propagations. The Learn rule allows us 
+to add a non-empty conflict clause to the input clauses to be 
+satisfied. The rules that follow model the interaction between 
+the SAT solver and the theory solvers.
+\begin{itemize}
+	\item $Propagate_i$ \\ $\infer[Prop_i]{M := Ml}	{l \in Lit_F \cup Int_M & 
+		\models_i l_1 \lor ... \lor 
+		l_n \lor l & \neg l_1, ..., \neg l_n \in M & l,\neg l \notin M}$ 
+	\item $Conflict_i$ \\ $\infer[Confl_i]{C := \{l_1 \lor ... \lor l_n \}}
+	{C = \phi & \models_i l_1 \lor ... \lor l_n & 
+		\neg l_1, ..., \neg l_n \in M}$
+	\item $Explain_i$ \\ $\infer[Expl_i]{C := \{l_1 \lor ... \lor l_n \lor D\}}
+	{C = \{\neg l \lor D\} & \models_i l_1 \lor ... \lor l_n \lor l & 
+		\neg\ l_1, ..., \neg\ l_n \prec_M l}$
+	\item $Learn_i$ \\ $\infer[Learn_i]{F := F \cup \{l_1[\textbf{c}] 
+		\lor ... \lor l_n[\textbf{c}]\}}
+	{l_1,...,l_n \in Lit_{M|i} \cup Int_M \cup L_i & 
+		\models_i \exists \textbf{x}(l_1[\textbf{x}] \lor ... 
+		\lor l_n[\textbf{x}])}$ \\ where $\textbf{x}$ is a possibly empty 
+	tuple of variables, and $\textbf{c}$ is a tuple of fresh constants 
+	from $C$ - the set of shared constants between the sorts - of the
+	same sort as $\textbf{x}$; $L_i$ is a finite set consisting of literals
+	not present in the original formula $F$.
+\end{itemize}
+The rules maintain the invariant that every conflict clause and learned 
+clause is entailed in T by the initial clause set.
+These rules are analogous to their propositional rules, but 
+have reasoning powers at the level of theories. For example, 
+$x \land y$ is true at the propositional level, if both 
+$x$ and $y$ are true. However, if the variables store these 
+arithmetic theory literals: \\
+$x = (a > 3)$ and $y = (a < 0)$, then $x \land y$ is 
+unsatisfiable in the theory of arithmetic. So even though 
+the $Conflict$ rule wont recognize this inconsistency, 
+the $Conflict_{Arith}$ rule can recognize this, as long as 
+the arithmetic solver is able to generate this fact as a 
+$theory lemma$ which are facts that are true in the theory, 
+generated in CNF form by the theory solvers. This example
+as a lemma would look like this:
+$\neg (a > 3) \lor \neg (a < 0)$ which would trigger the 
+$Conflict_i$ clause given that $x$ and $y$ above are assigned 
+to true, to satisfy $x \land y$. Thus, the $Propagate_i$, 
+$Conflict_i$, $Explain_i$, and $Learn_i$ rule are similar 
+to their propositional versions except that each rule is 
+associated to a theory $i$ and operates on lemmas 
+provided by that theory. 
+
+For example, consider the formula F in CNF expressed as the set:\\
+$\{a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b\}$
+\begin{center}
+	\begin{tabular}{l l l l l}
+		\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} & \textbf{Step}\\
+		\hline
+		& $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Dec & 1 \\
+		$\bullet a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Prop ($a \lor \neg b$) & 2 \\
+		$\bullet a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Prop $(b \lor c)$ & 3 \\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Confl $(\neg c \lor b)$ & 4 \\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 5 \\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $b$ & Expl $(\neg a \lor \neg b)$ & 6 \\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\neg a$ & Learn $(\neg a)$ & 7\\
+		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\neg a$ & Backj $(\neg a)$ & 8 \\
+		$\neg a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\phi$ & Prop $(a \lor \neg b)$ & 9 \\
+		$\neg a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\phi$ & Prop $(b \lor c)$ & 10 \\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\phi$ & Confl $(\neg c \lor b)$ & 11 \\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 12 \\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $b$ & Expl $(a \lor \neg b)$ & 13\\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $a$ & Expl $(\neg a)$ & 14 \\
+		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\bot$ & Fail & 15 \\
+	\end{tabular}
+\end{center}
+
+\textcolor{red}{THOERY EXAMPLE}
+
+\section{Propositional Resolution}
+Logical calculi operate by means of rules of inferences. A
+rule of inference consists of a number of premises and a 
+conclusion. The rule of inference specifies a schema for a 
+logical calculus where, if the premises are true, then 
+the conclusions are true. For example, \\
+$\infer[modus\ ponens]{\psi}{\phi \Rightarrow \psi & \phi}$ \\
+Modus ponens is a rule in classical logic that says that 
+"if A implies B is true $and$ if A is true, then B is true".
+
+The inference rule that is heavily used in construction of 
+proofs for SMT solvers is propositional resolution. It is
+stated as follows. \\
+$\infer[resolution]{\phi_1 \lor ... \lor \phi_n \lor \psi_1 \lor ... \lor \psi_m}
+{\phi_1 \lor ... \lor \phi_n \lor \chi & \neg \chi \lor \psi_1 \lor ... \lor \psi_m}$ \\
+
+Assuming the usual interpretations of the conjunction
+($\land$) and disjunction ($\lor$) in classical logic, the 
+intuition behind the resolution rule is explained using the 
+following instance of the resolution rule. \\
+$\infer{a \lor c}{a \lor \neg b & b \lor c}$ \\
+If the first premise is true, and $b$ is true - that is, 
+$\neg b$ is false, then $a$ must be true. If the second 
+premise is true, and $b$ is false, then $c$ must be true.
+Now, both premises must be true for the conclusion to be true, 
+and $b$ must be either true or false in classical logic. 
+So, either $a$ must be true, or $c$ must be true, and this 
+is the logical representation of our conclusion.
+\section{DPLL(T) Proofs}
+
+\section{LFSC - CVC4's Proof Format}
+
+\section{VeriT's Proof Format}
+
 \end{document}
