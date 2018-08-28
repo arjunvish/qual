@@ -483,9 +483,22 @@ and $b$ must be either true or false in classical logic.
 So, either $a$ must be true, or $c$ must be true, and this 
 is the logical representation of our conclusion.
 
+There exist logical calculi - that is sets of inference 
+rules - that, given a set of clauses, can generate all 
+clauses that are logically entailed by this set. In other 
+words, these calculi are $generatively complete$. Resolution 
+is a powerful rule since it alone constitutes a logical 
+calculus. Even though the resolution calculus 
+isn't generatively complete, it has the useful property that 
+if a set of clauses are unsatisfiable, then the calculus will 
+derive the empty clause from this set of clauses. 
+
+
 \subsection{DPLL(T) Proofs}
 \label{sec:dplltproofs}
-
+Given an execution of an DPLL(T) based SMT solver that ends 
+in the $fail$ state, we can prove that the input formula 
+$F_0$ is unsatisfiable as follows. 
 \section{Comparison of Solvers}
 \label{sec:comp}
 This section compares the proof systems of 3 state-of-the-art 
