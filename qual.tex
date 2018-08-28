@@ -2,8 +2,9 @@
 \usepackage{proof}
 \usepackage{bussproofs}
 \usepackage{xcolor}
+\usepackage{url}
 \begin{document}
-\title{Proofs and Proofs Formats for SMT Solvers}
+\title{Proofs for SMT Solvers}
 \author{Arjun Viswanathan}
 \date{}
 \maketitle
@@ -11,22 +12,26 @@
 \begin{abstract}
 Satisfiability Modulo Theories (SMT) solvers input typically
 large formulas that contain both Boolean logic and logic in 
-different theories - such as arithmetic - and decide whether 
+different theories - such as arithmetic and strings - and 
+decide whether 
 the formulas are satisfiable or unsatisfiable. Verification 
 tools use these solvers to prove system properties. As a 
 result, solver output must be trustable. However, SMT solvers 
-are really complicated tools that have tens of thousands of lines of code. For satisfied formulas, this can be a model of 
+are really complicated tools that have tens of thousands of lines of code. One way to make SMT solver ouput more reliable is 
+to have them produce proofs of their results. 
+For satisfied formulas, this can be a model of 
 satisfaction, that is, values for all the variables in the
 formula. For unsatisfied formulas, it is a transformation of 
 the formula into a simple contradiction using a small set of 
 inference rules, checkable by an external tool such as a proof 
 checker. This report describes the proof producing mechanisms 
-used by most SMT solvers and compares the proof formats of 
-VeriT and CVC4, two state-of-the-art SMT solvers.
+commonly used SMT solvers and compares the proof systems 
+of CVC4, VeriT, and Z3, three state-of-the-art SMT solvers.
 \end{abstract}
 
 \section{Introduction}
-Boolean satisfiability\textcolor{red}{REF}, often called the SAT problem, 
+\label{sec:intro}
+Boolean satisfiability, often called the SAT problem, 
 is the problem of satisfying a Boolean formula, that is, 
 consistently assigning values of True or False to the variables 
 of the formula so that the entire formula evaluates to True. 
@@ -37,8 +42,9 @@ assignment $\{x=True,y=False,z=True\}$. On the other hand, \\
 $x \land \neg x$ \\
 is unsatisfiable, no matter what value is assigned to $x$.
 
-Satisfiability Modulo Theories\textcolor{red}{REF} or SMT lifts SAT to a level 
-that includes theories. For example, \\
+Satisfiability Modulo Theories~\cite{DBLP:reference/mc/BarrettT18} or SMT 
+lifts SAT to a level that includes theories. 
+For example, \\
 $(a = b) \land (b = c) \land \neg (a = c)$ \\
 is a formula that is unsatisfiable in the theory of 
 equality over uninterpreted functions. This is because, by
@@ -49,13 +55,15 @@ procedures.
 
 SMT solvers have plenty of applications in formal methods 
 and software verification. For instance, SMT solvers are used 
-in the back-end of model checkers\textcolor{red}{REF}, which input mathematical 
+in the back-end of model checkers~\cite{DBLP:books/daglib/0020348}, which input mathematical 
 models of a software system, and verify whether they 
 satisfy a particular property or not. Another area of 
-application is symbolic execution\textcolor{red}{REF}, which is to analyze a 
+application is symbolic
+execution~\cite{DBLP:journals/csur/BaldoniCDDF18}, 
+which is to analyze a 
 program to figure out what set of inputs work for each 
 part of the program. Other uses of SMT solvers include 
-program synthesis\textcolor{red}{REF}, static analysis, 
+program synthesis~\cite{synth}, static analysis, 
 and interpolant generation\textcolor{red}{REF}.
 
 Given their rise in popularity and usage in the software 
@@ -64,7 +72,7 @@ to trust the outputs of SMT solvers. SMT solvers are typically
 very complex systems with tens of thousands of lines of code, 
 liable to contain bugs. Verifying such a large codebase can 
 be a cumbersome, if not impossible task. An alternative is 
-to rely on tools called proof checkers\textcolor{red}{REF}, 
+to rely on tools called proof checkers~\cite{proofasst}, 
 that have a much more trusted kernel that contain a small 
 set of axioms and inference rules. These proof checkers 
 sacrifice in automative capability what they gain in terms 
@@ -81,15 +89,22 @@ formats of the individual solvers.
 
 
 \section{Formal Preliminaries}
-The following grammar specifies the formulas we will use: \\ 
+\label{sec:prelim}
+The following grammar specifies the syntax of the formulas we
+will use: \\ 
 $Variable\ \rightarrow\ x\ |\ y\ |\ ... $ \\
 $Constant\ \rightarrow\ c_1\ |\ c_2\ |\ ... $ \\
-$Term\ \rightarrow\ Variable\ | Constant | f(t_1, ..., t_n)$ \\
-$Literal\ \rightarrow\ Term | \neg Term$ \\
-$Formula\ \rightarrow\ True | False | p(t_1, ..., t_n) | Literal | 
-Literal \lor Literal | Literal \land Literal$ \\ 
-$| Literal \Rightarrow Literal | Literal \iff Literal$ \\
+$Term\ \rightarrow\ Variable\ |\ Constant\ |\ f(t_1, ..., t_n)$ \\
+$Literal\ \rightarrow\ Term\ |\ \neg Term$ \\
+$Formula\ \rightarrow\ True\ |\ False |\ p(t_1, ..., t_n)\ 
+|\ Literal\ |\ Literal \lor Literal$ \\ 
+$|\ Literal \land Literal\ |\ Literal \Rightarrow Literal\ |\ Literal \iff Literal$ \\
 where $f$ is a function symbol and $p$ is a predicate symbol.
+
+Functions can be understood as they are in basic mathematics, 
+and predicates are functions to the Boolean type. Negation 
+($\neg$), disjunction ($\lor$), conjunction ($\land$), implication ($\Rightarrow$), and double implication
+($\iff$) have semantics as in classical logic~\cite{prop}.
 
 Our setting consists of a background theory T consisting 
 of m theories $T_1, ..., T_m$ with respective many-sorted 
@@ -97,22 +112,37 @@ signatures $\Sigma_1, ..., \Sigma_m$. All signatures share
 a set of sort (type) symbols, and equality is the only 
 predicate. The theories also share a set of 
 uninterpreted constants which are used for reasoning about 
-terms that belong to multiple theories.
+terms that belong to multiple theories. 
 
-This means that formulas are composed of Boolean components, 
-each of which will evaluate to True or False. However, since 
-we have theories, these components could be simple Boolean 
+This formalizes the fact that the framework here is 
+described for a single theory, but that theory can 
+be considered a combination of multiple theories~\cite{Manna2003}
+\textcolor{red}{REF}.This means that formulas are 
+composed of Boolean components, each of which will 
+evaluate to True or False. However, since 
+we have theories, these components could be just Boolean 
 variables, or they could be (dis)equalities over our 
-multiple theories, which gives us expressivity. For example, \\
+multiple theories, which gives us expressivity. 
+
+For example, is over the theory of linear integer 
+arithmetic (LIA) and the theory of 
+equality over uninterpreted functions (EUF)
+~\cite{LIAEUF}.\\
 $(x \land y) \Rightarrow (a = 0 \land a + b = c \land 
 \neg (f(b) = f(c)))$ \\
-is a formula over the theories of arithmetic and equality 
-over uninterpreted functions. $x$ and $y$ are terms in the 
+$x$ and $y$ are terms in the 
 formula, and hence can only evaluate to True or False.
 $a$, $b$, and $c$, on the other hand, are integer variables 
-that must evaluate to an integer constant.
+that must evaluate to an integer constant. To generalize 
+this, we assume our theory T to be a combination of $m$ 
+theories $T_1, ..., T_m$. Each theory $T_i$ is formally 
+described by means of a signature $\Sigma_i$, but we 
+will stick to intuitive theories such as the ones mentioned 
+before, so we don't have to deal with such formalisms. A 
+formal definition of theories and SMT can be found at 
+~\cite{DBLP:reference/mc/BarrettT18}.
 
-We also allow for representation of formulas that are 
+When it is used as a set, $\phi$ refers to the empty set. We also allow for representation of formulas that are 
 conjunctions of conjuncts, as sets of the corresponding 
 conjuncts. So we represent $c_1 \land ... \land c_n$ as
 $\{c_1, ..., c_n\}$. This is a useful representation, 
@@ -121,11 +151,65 @@ repeating the number of times a conjunct occurs in a
 conjunction doesn't change the meaning of that conjunction, 
 it only adds redundancy.
 
-\textcolor{red}{Entailment}
+We have the notion of entailment on two levels. Propositional 
+entailment: \\
+$p \models_P q$ \\
+read as ``formula $p$ propositionally entails formula $q$" says 
+that $q$ is a logical consequence of $p$. For example, 
+$a \land b \models_P a$, where a and b are Boolean 
+variables. Entailment also occurs in a theory:
+$x \models_i y$ \\
+read as ``formula $x$ $i$-entails formula $y$". For example, 
+$x > 3 \models_{LIA} x > 0$, where x is an integer variable.
+If we abstracted these formulas to the propositional level, 
+$m := x > 3$, and $n := x > 0$, 
+the entailment $m \models_P n$ cannot be realized at the 
+propositional level. We need reasoning at the level of 
+the theory of arithmetic for this entailment to hold.
+
+A formula is $satisfiable$ if we can consistently assign
+values to all its variables (Boolean and theory), 
+so that the formula evaluates to $True$. A formula is 
+$unsatisfiable$ if there is no consistent assignment that 
+we can give its variables so that the formula evaluates to 
+$True$. $(x + y = 0) \land (m \lor n)$ is satisfiable, 
+and a satisfying assignment is $\{x = 0, y = 0, m = True, 
+n = False\}$. $p \land \neg p$ is unsatisfiable. Two formulas 
+are $equisatisfiable$ if whenever one of them is satisfiable 
+by an assignment, the same assignment satisfies the other. 
 \textcolor{red}{Equisatisfiability}
 
+A formula is $valid$, if no matter what values we assign its 
+variables, it evaluates to $True$. In other words, it is
+entailed form nothing. For example, \\
+$\models_P p \lor \neg p$, and \\
+$\models_{LIA} (x = 0) \lor (x < 0) \lor (x > 0)$.
 
-\section{CNF Conversion}
+Finally, the universal quantifier ($\forall$) and 
+the existential quantifier ($\exists$) help us quantify 
+variables in formulas. For example, $\forall x, x > 0 
+\Rightarrow \neg (x < 0)$ states the obvious fact that 
+positive numbers aren't negative, and $\exists x, y = 2x$ 
+is the predicate that is true if $y$ is even. Our discussion 
+in this report only involves quantifier-free logic of SMT 
+solvers, but these are useful tools to have at the meta-level.
+
+
+\section{The DPLL(T) Algorithm}
+\label{sec:dpll}
+Davis-Putnam-Logemann-Loveland or DPLL - named after its 
+developers - is an algorithm developed in the 1960s 
+for deciding the satisfiability of propositional formulas.
+About half a century later, most SAT solvers and SMT solvers
+are still based on some form of DPLL. All the solvers 
+discussed in this work are DPLL(T) solvers, that is an 
+extension of DPLL to accommodate theories. Section,
+introduces the normal form required by these solvers, 
+and Section explains the DPLL(T) algorithm as a 
+transition system.
+
+\subsection{CNF Conversion}
+\label{sec:cnf}
 SMT solvers require that the input formula is converted to a 
 normal form called conjunctive normal form (CNF), before they 
 start solving them. The CNF of a formula represents the 
@@ -133,7 +217,7 @@ formula as a conjunction of disjunctions. A clause is a
 disjunction (Boolean OR) of variables. So CNF is a 
 conjunction (Boolean AND) of clauses. 
 
-Using Tseitin clausification\textcolor{red}{REF}, any formula 
+Using Tseitin clausification~\cite{BEL01Handbook}, any formula 
 can be converted into an equisatisfiable CNF formula 
 in linear time. Formulas F and G are equisatisfiable if 
 every model that satisfies F also satisfies G and vice-versa.
@@ -161,7 +245,8 @@ reduce these subterms to CNF by common rewrite rules
 such as distribution and De Morgan's law.
 
 
-\section{DPLL(T)}
+\subsection{Abstract DPLL(T) Framework}
+\label{sec:trans}
 DPLL(T) tries to satisfy the input formula - converted to 
 CNF - by assigning truth values to terms so that it can
 satisfy all input clauses. It is easy to satisfy a single
@@ -292,7 +377,7 @@ arithmetic theory literals: \\
 $x = (a > 3)$ and $y = (a < 0)$, then $x \land y$ is 
 unsatisfiable in the theory of arithmetic. So even though 
 the $Conflict$ rule wont recognize this inconsistency, 
-the $Conflict_{Arith}$ rule can recognize this, as long as 
+the $Conflict_{LIA}$ rule can recognize this, as long as 
 the arithmetic solver is able to generate this fact as a 
 $theory lemma$ which are facts that are true in the theory, 
 generated in CNF form by the theory solvers. This example
@@ -331,7 +416,23 @@ $\{a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b\}$
 
 \textcolor{red}{THOERY EXAMPLE}
 
-\section{Propositional Resolution}
+\section{DPLL(T) Proofs}
+\label{sec:proofs}
+This section describes the general framework used for a 
+DPLL(T) solver to produce proofs for unsatisfiable formulas. 
+A proof for a satisfiable formula is just a model that 
+satisfies that formula, that is an assignment of values to 
+the variables in the formula that make the formula evaluate 
+to $True$. For an unsatisfiable formula, the proof involves 
+transforming formula into a simple contradiction by means 
+of proof rules or inference rules. 
+
+An important rule is that of resolution, which is introduced 
+in section, followed by a general explanation of how DPLL(T) 
+solvers produce proofs of unsatisfiability in section.
+
+\subsection{Propositional Resolution}
+\label{sec:res}
 Logical calculi operate by means of rules of inferences. A
 rule of inference consists of a number of premises and a 
 conclusion. The rule of inference specifies a schema for a 
@@ -359,10 +460,19 @@ Now, both premises must be true for the conclusion to be true,
 and $b$ must be either true or false in classical logic. 
 So, either $a$ must be true, or $c$ must be true, and this 
 is the logical representation of our conclusion.
-\section{DPLL(T) Proofs}
 
-\section{LFSC - CVC4's Proof Format}
+\subsection{DPLL(T) Proofs}
+\label{sec:dplltproofs}
 
-\section{VeriT's Proof Format}
+\section{Comparison of Solvers}
+\label{sec:comp}
+This section compares the proof systems of 3 state-of-the-art 
+solvers CVC4, Z3, and VeriT as described in .
+
+\section{Conclusion}
+\label{sec:conc}
+
+\bibliographystyle{abbrv}
+\bibliography{bib}
 
 \end{document}
