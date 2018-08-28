@@ -1,13 +1,35 @@
-\documentclass{article}
+\documentclass{report}
+\renewcommand{\thesection}{\arabic{section}}
 \usepackage{proof}
 \usepackage{bussproofs}
 \usepackage{xcolor}
 \usepackage{url}
+
 \begin{document}
-\title{Proofs for SMT Solvers}
-\author{Arjun Viswanathan}
-\date{}
-\maketitle
+\begin{titlepage}
+	\centering
+	{\textbf{\Large University of Iowa \\ Computer Science Department}}
+	\vspace{1cm}
+	
+	{\Huge Comparison of Proof Producing Systems in SMT Solvers \par}
+	\vspace{1cm}
+	
+	{\large SUBMITTED IN PARTIAL FULFILLMENT OF THE REQUIREMENTS 
+		FOR THE QUALIFYING EXAM OF PH.D. PROGRAM \par}
+	\vspace{2cm}
+	
+	{\Large Arjun Viswanathan \par}
+	{\large University of Iowa - Computer Science Department \par}
+	{\large arjun-viswanthan@uiowa.edu}
+	\vspace{2cm}
+	
+	{\large Advisor \par}
+	{\Large Cesare Tinelli \par}
+	{\large cesare-tinelli@uiowa.edu \par}
+	
+	\vfill
+	{\large Fall 2018}
+\end{titlepage}
 
 \begin{abstract}
 Satisfiability Modulo Theories (SMT) solvers input typically
