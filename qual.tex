@@ -197,9 +197,21 @@ we can give its variables so that the formula evaluates to
 $True$. $(x + y = 0) \land (m \lor n)$ is satisfiable, 
 and a satisfying assignment is $\{x = 0, y = 0, m = True, 
 n = False\}$. $p \land \neg p$ is unsatisfiable. Two formulas 
-are $equisatisfiable$ if whenever one of them is satisfiable 
-by an assignment, the same assignment satisfies the other. 
-\textcolor{red}{Equisatisfiability}
+are $equisatisfiable$ if they are both satisfiable, or they 
+are both unsatisfiable. Notice that the model that 
+satisfies the two formulas isn't taken into account 
+for the definition of equisatisfiability. So $a$ and $b$ are 
+equisatisfiable formulas since $\{a = True, b = False\}$ 
+satisfies $a$ and $\{a = False, b = True\}$ satisfies b. 
+Two formulas are $equivalent$ if every model that satisfies 
+one of them satisfies the other as well. Consider 
+$a \land b$ and $a \land b \land n$. These are 
+equisatisfiable since both of them are satisfiable - 
+$\{a = True, b = True\}$ satisfies the first one and 
+$\{a = True, b = True, n = True\}$ satisfies the second one.
+However, they are not equivalent since model 
+$\{a = True, b = True, n = False\}$ satisfies the first one, 
+but not the second one.
 
 A formula is $valid$, if no matter what values we assign its 
 variables, it evaluates to $True$. In other words, it is
@@ -333,7 +345,7 @@ Transition rules:
 		& \neg l_1,...,\neg l_n \in M & l, \neg l \notin M}$ 
 	\item Decide:\\ $\infer[Dec]{M := M \bullet l}
 	{l \in Lit_F \cup Int_M & l, \neg l \notin M}$ \\
-	\item Conflict:\\ $\infer[Confl]{C:=\{l_1 \lor ... \lor l_N\}}
+	\item Conflict:\\ $\infer[Confl]{C:=\{l_1 \lor ... \lor l_n\}}
 	{C = \phi & l_1 \lor ... \lor l_n \in F & \neg l_1,...,\neg l_n \in M}$ 
 	\item Explain:\\ $\infer[Expl]{C := \{l_1 \lor ... \lor l_n \lor D\}}
 	{C = \{\neg l \lor D\} & l_1 \lor ... \lor l_n \lor l \in F 
@@ -498,7 +510,20 @@ derive the empty clause from this set of clauses.
 \label{sec:dplltproofs}
 Given an execution of an DPLL(T) based SMT solver that ends 
 in the $fail$ state, we can prove that the input formula 
-$F_0$ is unsatisfiable as follows. 
+$F_0$ is unsatisfiable as follows. We use the resolution 
+calculus mentioned above to build a refutation tree - 
+a tree with the input clauses and the learned clauses at the 
+leaves, that lead, through the application of the resolution
+rule to the empty clause $\bot$. The learned clauses aren't 
+technically in the leaf position, since they need to be 
+justified as well. A learned clause is obtained, when an input 
+clause that is conflicted by the context $M$ is modified by 
+the application of the $Explain$ rule. In fact, the $Explain$ 
+rule resolves the current conflict clause with a clause 
+belonging to $F$ to obtain a new conflict clause. So proofs 
+for learned clauses are also resolution proofs that are 
+built by observing the conflict clauses and the explanations 
+applied.  
 \section{Comparison of Solvers}
 \label{sec:comp}
 This section compares the proof systems of 3 state-of-the-art 
