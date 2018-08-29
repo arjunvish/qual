@@ -1,9 +1,11 @@
-\documentclass{report}
-\renewcommand{\thesection}{\arabic{section}}
+\documentclass{article}
 \usepackage{proof}
 \usepackage{bussproofs}
 \usepackage{xcolor}
 \usepackage{url}
+\usepackage{framed}
+\usepackage{syntax}
+\usepackage{amsmath}
 
 \begin{document}
 \begin{titlepage}
@@ -31,6 +33,9 @@
 	{\large Fall 2018}
 \end{titlepage}
 
+\title{Comparison of Proof Producing Systems in SMT Solvers}
+\date{}
+\maketitle
 \begin{abstract}
 Satisfiability Modulo Theories (SMT) solvers input typically
 large formulas that contain both Boolean logic and logic in 
@@ -39,7 +44,8 @@ decide whether
 the formulas are satisfiable or unsatisfiable. Verification 
 tools use these solvers to prove system properties. As a 
 result, solver output must be trustable. However, SMT solvers 
-are really complicated tools that have tens of thousands of lines of code. One way to make SMT solver ouput more reliable is 
+are really complicated tools that have tens of thousands of 
+lines of code. One way to make SMT solver ouput more reliable is 
 to have them produce proofs of their results. 
 For satisfied formulas, this can be a model of 
 satisfaction, that is, values for all the variables in the
@@ -57,17 +63,18 @@ Boolean satisfiability, often called the SAT problem,
 is the problem of satisfying a Boolean formula, that is, 
 consistently assigning values of True or False to the variables 
 of the formula so that the entire formula evaluates to True. 
-For example, \\ 
-$(x \lor y) \land z$ \\
+For example,
+\begin{center}$(x \lor y) \land z$ \end{center}
 can be satisfied by the 
-assignment $\{x=True,y=False,z=True\}$. On the other hand, \\
-$x \land \neg x$ \\
+assignment $\{x=True,y=False,z=True\}$. On the other hand, 
+\begin{center} $x \land \neg x$ \end{center}
 is unsatisfiable, no matter what value is assigned to $x$.
 
-Satisfiability Modulo Theories~\cite{DBLP:reference/mc/BarrettT18} or SMT 
-lifts SAT to a level that includes theories. 
-For example, \\
-$(a = b) \land (b = c) \land \neg (a = c)$ \\
+Satisfiability Modulo Theories~\cite{DBLP:reference/mc/BarrettT18} 
+or SMT lifts SAT to a level that includes theories. 
+For example, 
+\begin{center} $(a = b) \land (b = c) \land \neg (a = c)$ 
+\end{center}
 is a formula that is unsatisfiable in the theory of 
 equality over uninterpreted functions. This is because, by
 transitivity of $a = b$ and $b = c$, we have $a = c$. SMT 
@@ -77,7 +84,8 @@ procedures.
 
 SMT solvers have plenty of applications in formal methods 
 and software verification. For instance, SMT solvers are used 
-in the back-end of model checkers~\cite{DBLP:books/daglib/0020348}, which input mathematical 
+in the back-end of model checkers~\cite{DBLP:books/daglib/0020348}, 
+which input mathematical 
 models of a software system, and verify whether they 
 satisfy a particular property or not. Another area of 
 application is symbolic
@@ -95,7 +103,7 @@ very complex systems with tens of thousands of lines of code,
 liable to contain bugs. Verifying such a large codebase can 
 be a cumbersome, if not impossible task. An alternative is 
 to rely on tools called proof checkers~\cite{proofasst}, 
-that have a much more trusted kernel that contain a small 
+that have a much more trusted kernel containing a small 
 set of axioms and inference rules. These proof checkers 
 sacrifice in automative capability what they gain in terms 
 of trustability over SMT solvers. To exploit these proof 
@@ -104,28 +112,42 @@ outputs, that can be checked by the proof checker.
 
 In this report, I introduce the workings of an SMT solver 
 and their proof producing capabilities; I also compare the 
-proof formats of CVC4 and VeriT, two state-of-the-art SMT solvers. I begin by explain the algorithm that is at the core 
+proof systems of CVC4, VeriT, VeriT and Z3 - three 
+state-of-the-art SMT solvers - as respectively 
+described in the research papers titled ``Lazy Proofs for 
+DPLL(T)-Based SMT Solvers"~\cite{DBLP:conf/fmcad/2016}, 
+``Expressiveness + Automation + Soundness : 
+Towards Combining SMT Solvers and Interactive 
+Proof Assistants"~\cite{DBLP:conf/tacas/2006}, 
+and ``Proofs and Refutations, and Z3"~\cite{DBLP:conf/lpar/2008w}.
+I begin by explain the algorithm that is at the core 
 of most SMT solvers. I then explain the logical basis for 
-proof production in SMT solvers, and then discuss the proof 
-formats of the individual solvers.
+proof production in SMT solvers, and then get into 
+comparing the research work as I explain the proof 
+production systems of the SMT solvers.
 
 
 \section{Formal Preliminaries}
 \label{sec:prelim}
 The following grammar specifies the syntax of the formulas we
-will use: \\ 
-$Variable\ \rightarrow\ x\ |\ y\ |\ ... $ \\
-$Constant\ \rightarrow\ c_1\ |\ c_2\ |\ ... $ \\
-$Term\ \rightarrow\ Variable\ |\ Constant\ |\ f(t_1, ..., t_n)$ \\
-$Literal\ \rightarrow\ Term\ |\ \neg Term$ \\
-$Formula\ \rightarrow\ True\ |\ False |\ p(t_1, ..., t_n)\ 
-|\ Literal\ |\ Literal \lor Literal$ \\ 
-$|\ Literal \land Literal\ |\ Literal \Rightarrow Literal\ |\ Literal \iff Literal$ \\
+will use: 
+\begin{align*}
+&Variable &\rightarrow\  &x\ |\ y\ |\ ...  \\
+&Constant &\rightarrow\ &c_1\ |\ c_2\ |\ ...  \\
+&Term &\rightarrow\ &Variable\ |\ Constant\ |\ f(t_1, ..., t_n) \\
+&Literal &\rightarrow\ &Term\ |\ \neg Term \\
+&Formula &\rightarrow\ &True\ |\ False |\ p(t_1, ..., t_n)\ 
+					|\ Literal\ |\ Literal \lor Literal \\ 
+& & &				|\ Literal \land Literal\ 
+					|\ Literal \Rightarrow Literal\ 
+					|\ Literal \iff Literal \\
+\end{align*}
 where $f$ is a function symbol and $p$ is a predicate symbol.
 
 Functions can be understood as they are in basic mathematics, 
 and predicates are functions to the Boolean type. Negation 
-($\neg$), disjunction ($\lor$), conjunction ($\land$), implication ($\Rightarrow$), and double implication
+($\neg$), disjunction ($\lor$), conjunction ($\land$), 
+implication ($\Rightarrow$), and double implication
 ($\iff$) have semantics as in classical logic~\cite{prop}.
 
 Our setting consists of a background theory T consisting 
@@ -138,8 +160,8 @@ terms that belong to multiple theories.
 
 This formalizes the fact that the framework here is 
 described for a single theory, but that theory can 
-be considered a combination of multiple theories~\cite{Manna2003}
-\textcolor{red}{REF}.This means that formulas are 
+be considered a combination of multiple 
+theories~\cite{Manna2003}. This means that formulas are 
 composed of Boolean components, each of which will 
 evaluate to True or False. However, since 
 we have theories, these components could be just Boolean 
@@ -237,10 +259,12 @@ for deciding the satisfiability of propositional formulas.
 About half a century later, most SAT solvers and SMT solvers
 are still based on some form of DPLL. All the solvers 
 discussed in this work are DPLL(T) solvers, that is an 
-extension of DPLL to accommodate theories. Section,
+extension of DPLL to accommodate theories. 
+Section~\ref{sec:cnf}
 introduces the normal form required by these solvers, 
-and Section explains the DPLL(T) algorithm as a 
-transition system.
+and Section~\ref{sec:trans} explains the DPLL(T) algorithm as a 
+transition system as presented 
+in~\cite{DBLP:conf/fmcad/2016}
 
 \subsection{CNF Conversion}
 \label{sec:cnf}
@@ -257,21 +281,25 @@ in linear time. Formulas F and G are equisatisfiable if
 every model that satisfies F also satisfies G and vice-versa.
 
 The following is an example where a set of rewrite rules
-are applied to F to convert it into CNF. \\
-$F: a \Rightarrow (b \land c)$ \\
-$Step\ 1: a \Rightarrow x_1 \land (x_1 \iff (b \land c))$ \\
-$Step\ 2: x_2 \land (x_2 \iff a \Rightarrow x_1) \land 
-(x_1 \iff (b \land c))$ \\
-$Step\ 3: x_2 \land \\
-(x_2 \Rightarrow (a \Rightarrow x_1) \land 
-(a \Rightarrow x_1) \Rightarrow x_2) \land \\
-(x_1 \Rightarrow (b \land c) \land 
-(b \land c) \Rightarrow x_1)$ \\
-$Step\ 4: x_2 \land \\
-(\neg x_2 \lor \neg a \lor x_1) \land 
-(a \lor x_2) \land (\neg x_1 \lor x_2) \land \\
-(\neg x_1 \lor b) \land (\neg x_1 \lor c) \land 
-(\neg b \lor \neg c \lor x_1)$ \\
+are applied to F to convert it into CNF. 
+\begin{align*}
+	&F&\ &a \Rightarrow (b \land c) \\
+	&Step\ 1&\ &a \Rightarrow x_1 
+		\land (x_1 \iff (b \land c)) \\
+	&Step\ 2&\ &x_2 \land (x_2 \iff a \Rightarrow x_1) 
+		\land (x_1 \iff (b \land c)) \\
+	&Step\ 3&\ &x_2 \land \\
+	& & &(x_2 \Rightarrow (a \Rightarrow x_1) \land 
+		(a \Rightarrow x_1) \Rightarrow x_2) \land \\
+	& & &(x_1 \Rightarrow (b \land c) \land 
+		(b \land c) \Rightarrow x_1) \\
+	&Step\ 4&\ &x_2 \land \\
+	& & &(\neg x_2 \lor \neg a \lor x_1) \land 
+		(a \lor x_2) \land (\neg x_1 \lor x_2) \land \\
+	& & &(\neg x_1 \lor b) \land (\neg x_1 \lor c) \land 
+		(\neg b \lor \neg c \lor x_1) \\
+\end{align*}
+
 Steps 1 and 2 involve introducing fresh variables $x_1$
 and $x_2$ for all subterms of F by means of equivalence 
 between the subterm and the fresh variable. Steps 3 and 4 
@@ -281,6 +309,60 @@ such as distribution and De Morgan's law.
 
 \subsection{Abstract DPLL(T) Framework}
 \label{sec:trans}
+
+\begin{figure}[t]
+	\centering
+	\begin{framed}
+		\begin{tabular}{c}
+			$\infer[Prop]{M := Ml}{l_1 \lor ... \lor l_n \lor l \in F 
+				& \neg l_1,...,\neg l_n \in M & l, \neg l \notin M}$ \\ \\
+			$\infer[Dec]{M := M \bullet l}
+			{l \in Lit_F \cup Int_M & l, \neg l \notin M}$ \\ \\
+			$\infer[Confl]{C:=\{l_1 \lor ... \lor l_n\}}
+			{C = \phi & l_1 \lor ... \lor l_n \in F & \neg l_1,...,\neg l_n \in M}$ \\ \\
+			$\infer[Expl]{C := \{l_1 \lor ... \lor l_n \lor D\}}
+			{C = \{\neg l \lor D\} & l_1 \lor ... \lor l_n \lor l \in F 
+				& \neg l_1,...,\neg l_n \prec_M l}$ \\ \\
+			$\infer[Backj]{C := \phi\ \ \ M := M^{[i]}l}
+			{C = \{l_1 \lor ... \lor l_n \lor l\} & 
+				lev\ \neg l_1, ... , lev\ \neg l_n \leq i < lev\ \neg l}$ \\ \\
+			$\infer[Learn]{F := F \cup C}{C \neq \phi}$ \\ \\
+			$\infer[Fail]{fail}{C \neq \phi & \bullet \notin M}$ \\ \\
+		\end{tabular}
+	\end{framed}
+	\caption{Transition rules at Propositional level}
+	\label{fig:proprules}
+\end{figure}
+
+\begin{figure}[t]
+	\centering
+	\begin{framed}
+		\begin{tabular}{c}
+			
+			$\infer[Prop_i]{M := Ml}	{l \in Lit_F \cup Int_M & 
+				\models_i l_1 \lor ... \lor 
+				l_n \lor l & \neg l_1, ..., \neg l_n \in M & l,\neg l \notin M}$ \\ \\
+			$\infer[Confl_i]{C := \{l_1 \lor ... \lor l_n \}}
+			{C = \phi & \models_i l_1 \lor ... \lor l_n & 
+				\neg l_1, ..., \neg l_n \in M}$ \\ \\
+			$\infer[Expl_i]{C := \{l_1 \lor ... \lor l_n \lor D\}}
+			{C = \{\neg l \lor D\} & \models_i l_1 \lor ... \lor l_n \lor l & 
+				\neg\ l_1, ..., \neg\ l_n \prec_M l}$ \\ \\
+			$\infer[Learn_i]{F := F \cup \{l_1[\textbf{c}] 
+				\lor ... \lor l_n[\textbf{c}]\}}
+			{l_1,...,l_n \in Lit_{M|i} \cup Int_M \cup L_i & 
+				\models_i \exists \textbf{x}(l_1[\textbf{x}] \lor ... 
+				\lor l_n[\textbf{x}])}$ \\ \\
+		\end{tabular}
+	\end{framed}
+	\caption{Transition rules at Theory level. $\textbf{x}$ is a possibly empty 
+		tuple of variables, and $\textbf{c}$ is a tuple of fresh constants 
+		from $C$ - the set of shared constants between the sorts - of the
+		same sort as $\textbf{x}$; $L_i$ is a finite set consisting of literals
+		not present in the original formula $F$.}
+	\label{fig:theoryrules}
+\end{figure}
+
 DPLL(T) tries to satisfy the input formula - converted to 
 CNF - by assigning truth values to terms so that it can
 satisfy all input clauses. It is easy to satisfy a single
@@ -339,71 +421,60 @@ terms, \\
 $f(a) = s_1, s_1 = 1 + x$ \\
 we now have one term that is entirely over uninterpreted 
 functions, and one over arithmetic ones. \\
-Transition rules:
-\begin{itemize}
-	\item Propagate:\\ $\infer[Prop]{M := Ml}{l_1 \lor ... \lor l_n \lor l \in F 
-		& \neg l_1,...,\neg l_n \in M & l, \neg l \notin M}$ 
-	\item Decide:\\ $\infer[Dec]{M := M \bullet l}
-	{l \in Lit_F \cup Int_M & l, \neg l \notin M}$ \\
-	\item Conflict:\\ $\infer[Confl]{C:=\{l_1 \lor ... \lor l_n\}}
-	{C = \phi & l_1 \lor ... \lor l_n \in F & \neg l_1,...,\neg l_n \in M}$ 
-	\item Explain:\\ $\infer[Expl]{C := \{l_1 \lor ... \lor l_n \lor D\}}
-	{C = \{\neg l \lor D\} & l_1 \lor ... \lor l_n \lor l \in F 
-		& \neg l_1,...,\neg l_n \prec_M l}$
-	\item Backjump:\\ $\infer[Backj]{C := \phi\ \ \ M := M^{[i]}l}
-	{C = \{l_1 \lor ... \lor l_n \lor l\} & 
-		lev\ \neg l_1, ... , lev\ \neg l_n \leq i < lev\ \neg l}$
-	\item Learn: \\ $\infer[Learn]{F := F \cup C}{C \neq \phi}$
-	\item Fail:\\ $\infer[Fail]{fail}{C \neq \phi & \bullet \notin M}$
-\end{itemize}
-The rules above model the behavior of the SAT engine, which treats atoms
-as Boolean variables. Propagations allow us to assign 
+
+The rules of the transition systems can be split into a 
+set of propositional rules, and a set of theory rules. 
+Figure~\ref{fig:proprules} enumerates the propositional rules.
+These rules alone constitute the DPLL(T) algorithm at the
+propositional level, or just DPLL.
+They model the behavior of the SAT engine, 
+which treats atoms
+as Boolean variables. Propagations (Prop) allow us to assign 
 literals that we are forced to assign by the logic. We 
 might not always have this luxury; sometimes, we may have 
-to make a guess on an assignment, and decisions let us do 
-that. Propogations and/or decisions could lead us to 
+to make a guess on an assignment, and decisions (Dec) let us do 
+this. Propogations and/or decisions could lead us to 
 a point where our current assignment conflicts with 
 our goal of trying to satisfy the input formula. The 
-Conflict rule recognizes this. If we encounter a conflict, 
+conflict rule (Confl) recognizes this. If we encounter a conflict, 
 and there were no previous decisions made, then we were 
 forced by the logic to arrive at that conflict, so we 
 conclude that the input formula is unsatisfiable. The Fail 
 rule ensures this. If, there are previous decisions at
-the time of conflict, then the Explain rule undoes 
+the time of conflict, then the explain rule (Expl) undoes 
 propagations on top of conflicts, so we can get to a 
-potentially wrong decision that we made, so we
-can take the path down the opposite guess. Flipping a guess 
-is handled by the Backjump rule. A conflict clause always 
+potentially wrong decision that we made, in order to
+take the path down the opposite guess. Flipping a guess 
+is handled by the backjump rule (Backj). A conflict clause always 
 consists of a formula that is entailed by the input formula. 
-Explanations could have actually transformed the conflict 
-clause into something that we didn't know that could actually
-help us with future propagations. The Learn rule allows us 
+Explanations could transform the conflict 
+clause into a clause that we didn't have to begin with, 
+and this could be useful information for future propagations. 
+The Learn rule allows us 
 to add a non-empty conflict clause to the input clauses to be 
-satisfied. The rules that follow model the interaction between 
-the SAT solver and the theory solvers.
-\begin{itemize}
-	\item $Propagate_i$ \\ $\infer[Prop_i]{M := Ml}	{l \in Lit_F \cup Int_M & 
-		\models_i l_1 \lor ... \lor 
-		l_n \lor l & \neg l_1, ..., \neg l_n \in M & l,\neg l \notin M}$ 
-	\item $Conflict_i$ \\ $\infer[Confl_i]{C := \{l_1 \lor ... \lor l_n \}}
-	{C = \phi & \models_i l_1 \lor ... \lor l_n & 
-		\neg l_1, ..., \neg l_n \in M}$
-	\item $Explain_i$ \\ $\infer[Expl_i]{C := \{l_1 \lor ... \lor l_n \lor D\}}
-	{C = \{\neg l \lor D\} & \models_i l_1 \lor ... \lor l_n \lor l & 
-		\neg\ l_1, ..., \neg\ l_n \prec_M l}$
-	\item $Learn_i$ \\ $\infer[Learn_i]{F := F \cup \{l_1[\textbf{c}] 
-		\lor ... \lor l_n[\textbf{c}]\}}
-	{l_1,...,l_n \in Lit_{M|i} \cup Int_M \cup L_i & 
-		\models_i \exists \textbf{x}(l_1[\textbf{x}] \lor ... 
-		\lor l_n[\textbf{x}])}$ \\ where $\textbf{x}$ is a possibly empty 
-	tuple of variables, and $\textbf{c}$ is a tuple of fresh constants 
-	from $C$ - the set of shared constants between the sorts - of the
-	same sort as $\textbf{x}$; $L_i$ is a finite set consisting of literals
-	not present in the original formula $F$.
-\end{itemize}
-The rules maintain the invariant that every conflict clause and learned 
+satisfied. 
+
+Consider the following example from~\cite{DBLP:conf/fmcad/2016}.
+The formula F expressed as a set in CNF is:
+\begin{center}
+$\{a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b\}$
+\end{center}
+Figure~\ref{fig:propex} shows how the DPLL solves this 
+formula. Notice that at Step 11, the $Fail$ rule can be 
+applied to conclude that the formula is unsatisfiable, and 
+this is what the solver would typically do. However, for 
+producing a proof of unsatisfiability, it is necessary for the 
+conflict clause to be the empty clause $\bot$, and hence the 
+solver explains on the conflict instead. A few steps later, 
+the solver does conclude that the formula is unsatisfiable, 
+while deriving the most basic conflict, the empty clause.
+
+The rules in Figure~\ref{fig:theoryrules} model the 
+interaction between the SAT solver and the theory solvers.
+These rules maintain the invariant that every 
+conflict clause and learned 
 clause is entailed in T by the initial clause set.
-These rules are analogous to their propositional rules, but 
+The rules are analogous to their propositional rules, but 
 have reasoning powers at the level of theories. For example, 
 $x \land y$ is true at the propositional level, if both 
 $x$ and $y$ are true. However, if the variables store these 
@@ -413,7 +484,7 @@ unsatisfiable in the theory of arithmetic. So even though
 the $Conflict$ rule wont recognize this inconsistency, 
 the $Conflict_{LIA}$ rule can recognize this, as long as 
 the arithmetic solver is able to generate this fact as a 
-$theory lemma$ which are facts that are true in the theory, 
+$theory\ lemma$, which is a fact that is true in the theory, 
 generated in CNF form by the theory solvers. This example
 as a lemma would look like this:
 $\neg (a > 3) \lor \neg (a < 0)$ which would trigger the 
@@ -424,29 +495,46 @@ to their propositional versions except that each rule is
 associated to a theory $i$ and operates on lemmas 
 provided by that theory. 
 
-For example, consider the formula F in CNF expressed as the set:\\
-$\{a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b\}$
+\begin{figure}[t]
 \begin{center}
-	\begin{tabular}{l l l l l}
-		\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} & \textbf{Step}\\
-		\hline
-		& $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Dec & 1 \\
-		$\bullet a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Prop ($a \lor \neg b$) & 2 \\
-		$\bullet a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Prop $(b \lor c)$ & 3 \\
-		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\phi$ & Confl $(\neg c \lor b)$ & 4 \\
-		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 5 \\
-		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $b$ & Expl $(\neg a \lor \neg b)$ & 6 \\
-		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ & $\neg a$ & Learn $(\neg a)$ & 7\\
-		$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\neg a$ & Backj $(\neg a)$ & 8 \\
-		$\neg a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\phi$ & Prop $(a \lor \neg b)$ & 9 \\
-		$\neg a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\phi$ & Prop $(b \lor c)$ & 10 \\
-		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\phi$ & Confl $(\neg c \lor b)$ & 11 \\
-		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 12 \\
-		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $b$ & Expl $(a \lor \neg b)$ & 13\\
-		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $a$ & Expl $(\neg a)$ & 14 \\
-		$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b, \neg a$ & $\bot$ & Fail & 15 \\
-	\end{tabular}
+\begin{tabular}{l l l l l}
+	\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} & \textbf{Step}\\
+	\hline
+	& $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ 
+		& $\phi$ & Dec & 1 \\
+	$\bullet a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+		\neg c \lor b$ & $\phi$ & Prop ($a \lor \neg b$) & 2 \\
+	$\bullet a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, 
+		b \lor c, \neg c \lor b$ & $\phi$ & Prop $(b \lor c)$ & 3 \\
+	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+		b \lor c, \neg c \lor b$ & $\phi$ & Confl $(\neg c \lor b)$ & 4 \\
+	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+		\neg c \lor b$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 5 \\
+	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+		b \lor c, \neg c \lor b$ & $b$ & Expl $(\neg a \lor \neg b)$ & 6 \\
+	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+		b \lor c, \neg c \lor b$ & $\neg a$ & Learn $(\neg a)$ & 7\\
+	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+		b \lor c, \neg c \lor b, \neg a$ & $\neg a$ & Backj $(\neg a)$ & 8 \\
+	$\neg a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+		\neg c \lor b, \neg a$ & $\phi$ & Prop $(a \lor \neg b)$ & 9 \\
+	$\neg a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+		\neg c \lor b, \neg a$ & $\phi$ & Prop $(b \lor c)$ & 10 \\
+	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+		\neg c \lor b, \neg a$ & $\phi$ & Confl $(\neg c \lor b)$ & 11 \\
+	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+		\neg c \lor b, \neg a$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 12 \\
+	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+		\neg c \lor b, \neg a$ & $b$ & Expl $(a \lor \neg b)$ & 13\\
+	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+		\neg c \lor b, \neg a$ & $a$ & Expl $(\neg a)$ & 14 \\
+	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+		\neg c \lor b, \neg a$ & $\bot$ & Fail & 15 \\
+\end{tabular}
 \end{center}
+	\caption{Example for Propositional level DPLL(T)}
+	\label{fig:propex}
+\end{figure}
 
 \textcolor{red}{THOERY EXAMPLE}
 
@@ -462,8 +550,10 @@ transforming formula into a simple contradiction by means
 of proof rules or inference rules. 
 
 An important rule is that of resolution, which is introduced 
-in section, followed by a general explanation of how DPLL(T) 
-solvers produce proofs of unsatisfiability in section.
+in Section~\ref{sec:res}. Proofs of unsatisfiability are then 
+explained, at the propositional level in 
+Section~\ref{sec:propproofs}, and at the theory level in 
+Section~\ref{sec:theoryproofs}.
 
 \subsection{Propositional Resolution}
 \label{sec:res}
@@ -506,15 +596,72 @@ if a set of clauses are unsatisfiable, then the calculus will
 derive the empty clause from this set of clauses. 
 
 
-\subsection{DPLL(T) Proofs}
-\label{sec:dplltproofs}
+\subsection{Proofs at the Propositional Level}
+\label{sec:propproofs}
+
+\begin{figure}[t]
+	\begin{center}
+		\begin{tabular}{l l l l l}
+			\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} & \textbf{Step}\\
+			\hline
+			& $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ 
+			& $\phi$ & Dec & 1 \\
+			$\bullet a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b$ & $\phi$ & Prop ($a \lor \neg b$) & 2 \\
+			$\bullet a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b$ & $\phi$ & Prop $(b \lor c)$ & 3 \\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b$ & $\phi$ & Confl $(\neg c \lor b)$ & 4 \\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 5 \\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b$ & $b$ & Expl $(\neg a \lor \neg b)$ & 6 \\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b$ & $\neg a$ & Learn $(\neg a)$ & 7\\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b, \neg a$ & $\neg a$ & Backj $(\neg a)$ & 8 \\
+			$\neg a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\phi$ & Prop $(a \lor \neg b)$ & 9 \\
+			$\neg a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\phi$ & Prop $(b \lor c)$ & 10 \\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\phi$ & Confl $(\neg c \lor b)$ & 11 \\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 12 \\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $b$ & Expl $(a \lor \neg b)$ & 13\\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $a$ & Expl $(\neg a)$ & 14 \\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\bot$ & Fail & 15 \\
+		\end{tabular}
+	\end{center}
+	
+	\begin{prooftree}
+		\AxiomC{$\neg c \lor b$ (4)}
+		\AxiomC{$b \lor c$ (5)}
+		\BinaryInfC{$b$}
+		\AxiomC{$\neg a \lor \neg b$ (6)}
+		\BinaryInfC{$\neg a$ (14)}
+		\AxiomC{$\neg c \lor b$ (11)}
+		\AxiomC{$b \lor c$ (12)}
+		\BinaryInfC{$b$}
+		\AxiomC{$a \lor \neg b$ (13)}
+		\BinaryInfC{$a$}
+		\BinaryInfC{$\bot$}
+	\end{prooftree}
+	\caption{Proof tree for example in Figure~\ref{fig:propex}}
+	\label{fig:propproof}
+\end{figure}
+
+At the propositional level, the proof system works as follows.
 Given an execution of an DPLL(T) based SMT solver that ends 
 in the $fail$ state, we can prove that the input formula 
 $F_0$ is unsatisfiable as follows. We use the resolution 
 calculus mentioned above to build a refutation tree - 
 a tree with the input clauses and the learned clauses at the 
-leaves, that lead, through the application of the resolution
-rule to the empty clause $\bot$. The learned clauses aren't 
+leaves, that lead - through the application of the resolution
+rule - to the empty clause $\bot$. The learned clauses aren't 
 technically in the leaf position, since they need to be 
 justified as well. A learned clause is obtained, when an input 
 clause that is conflicted by the context $M$ is modified by 
@@ -524,6 +671,37 @@ belonging to $F$ to obtain a new conflict clause. So proofs
 for learned clauses are also resolution proofs that are 
 built by observing the conflict clauses and the explanations 
 applied.  
+
+Figure~\ref{fig:propproof} shows the proof tree for the 
+unsatisfiability of F from the example in Figure~\ref{fig:propex}, 
+reproduced for convenience. The nodes of the tree contain 
+the clause being used followed by the step number from 
+algorithm in parentheses. The left subtree is a proof of
+$\neg a$. The right subtree is the proof of $a$ which is 
+a learned clause.
+
+Steps 1 to 7 constitute the left subtree of the proof tree that
+adds $\neg a$ as a learned clause to F
+(Although $\neg a$ is actually used in Step 14, 
+it is derived in Step 7). Steps 8 to 14 constitute 
+the left subtree of the proof tree.
+Conflict clauses and explanations represent propositional resolution
+between clauses and the proof tree has a leaf for every application 
+of the Conflict and the Explain rules, and the node at the root 
+represents the Fail rule. The $\neg a$ node at the root of the 
+left subtree
+is an exception to this (it represents an explanation, but isn't a leaf
+in the tree), but notice that it is a learned clause; 
+so the tree could be considered as a split of the current tree 
+at the $\neg a$ node. The left subtree of the new tree 
+would then just consist of $\neg a$ as a leaf, and the proof 
+for $\neg a$ would be a satellite proof tree representing 
+the left sub-tree of the current tree. That is how it is depicted 
+in ~\cite{DBLP:conf/fmcad/2016}.
+
+\subsection{Proofs at the Theory Level}
+\label{sec:theoryproofs}
+
 \section{Comparison of Solvers}
 \label{sec:comp}
 This section compares the proof systems of 3 state-of-the-art 
