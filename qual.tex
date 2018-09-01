@@ -114,11 +114,11 @@ and their proof producing capabilities; I also compare the
 proof systems of CVC4, VeriT, VeriT and Z3 - three 
 state-of-the-art SMT solvers - as respectively 
 described in the research papers titled ``Lazy Proofs for 
-DPLL(T)-Based SMT Solvers"~\cite{DBLP:conf/fmcad/2016}, 
+DPLL(T)-Based SMT Solvers"~\cite{DBLP:conf/fmcad/KatzBTRH16}, 
 ``Expressiveness + Automation + Soundness : 
 Towards Combining SMT Solvers and Interactive 
-Proof Assistants"~\cite{DBLP:conf/tacas/2006}, 
-and ``Proofs and Refutations, and Z3"~\cite{DBLP:conf/lpar/2008w}.
+Proof Assistants"~\cite{DBLP:conf/tacas/FontaineMMNT06}, 
+and ``Proofs and Refutations, and Z3"~\cite{DBLP:conf/lpar/MouraB08}.
 I begin by explain the algorithm that is at the core 
 of most SMT solvers. I then explain the logical basis for 
 proof production in SMT solvers, and then get into 
@@ -696,7 +696,7 @@ at the $\neg a$ node. The left subtree of the new tree
 would then just consist of $\neg a$ as a leaf, and the proof 
 for $\neg a$ would be a satellite proof tree representing 
 the left sub-tree of the current tree. That is how it is depicted 
-in ~\cite{DBLP:conf/fmcad/2016}.
+in ~\cite{DBLP:conf/fmcad/KatzBTRH16}.
 
 \subsection{Proofs at the Theory Level}
 \label{sec:theoryproofs}
