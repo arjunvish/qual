@@ -61,12 +61,12 @@ of CVC4, VeriT, and Z3, three state-of-the-art SMT solvers.
 \label{sec:intro}
 Boolean satisfiability, often called the SAT problem, 
 is the problem of satisfying a Boolean formula, that is, 
-consistently assigning values of True or False to the variables 
-of the formula so that the entire formula evaluates to True. 
+consistently assigning values of $True$ or $False$ to the variables 
+of the formula so that the entire formula evaluates to $True$. 
 For example,
 \begin{center}$(x \lor y) \land z$ \end{center}
 can be satisfied by the 
-assignment $\{x=True,y=False,z=True\}$. On the other hand, 
+assignment $\{x=True,\ y=False,\ z=True\}$. On the other hand, 
 \begin{center} $x \land \neg x$ \end{center}
 is unsatisfiable, no matter what value is assigned to $x$.
 
@@ -94,7 +94,7 @@ which is to analyze a
 program to figure out what set of inputs work for each 
 part of the program. Other uses of SMT solvers include 
 program synthesis~\cite{synth}, static analysis, 
-and interpolant generation\textcolor{red}{REF}.
+and interpolant generation~\cite{DBLP:journals/corr/abs-1111-5652}.
 
 Given their rise in popularity and usage in the software 
 verification world, it is really important that we are able 
@@ -158,14 +158,13 @@ predicate. The theories also share a set of
 uninterpreted constants which are used for reasoning about 
 terms that belong to multiple theories. 
 
-\begin{framed}
 The preceding part of this section formalizes the fact 
 that the framework here is 
 described for a single theory, but that theory can 
 be considered a combination of multiple 
 theories~\cite{Manna2003}. This means that formulas are 
 composed of Boolean components, each of which will 
-evaluate to True or False. However, since 
+evaluate to $True$ or $False$. However, since 
 we have theories, these components could be just Boolean 
 variables, or they could be (dis)equalities over our 
 multiple theories, which gives us expressivity. 
@@ -178,7 +177,7 @@ equality over uninterpreted functions (EUF)
 $(x \land y) \Rightarrow (a = 0 \land a + b = c \land 
 \neg (f(b) = f(c)))$ \\
 $x$ and $y$ are terms in the 
-formula, and hence can only evaluate to True or False.
+formula, and hence can only evaluate to $True$ or $False$.
 $a$, $b$, and $c$, on the other hand, are integer variables 
 that must evaluate to an integer constant. To generalize 
 this, we assume our theory T to be a combination of $m$ 
@@ -186,18 +185,14 @@ theories $T_1, ..., T_m$. Each theory $T_i$ is formally
 described by means of a signature $\Sigma_i$, but we 
 will stick to intuitive theories such as the ones mentioned 
 before, so we don't have to deal with such formalisms. A 
-formal definition of theories and SMT can be found at 
-~\cite{DBLP:reference/mc/BarrettT18}.
-\end{framed}
+formal definition of theories and SMT can be found 
+at~\cite{DBLP:reference/mc/BarrettT18}.
 
-When it is used as a set, $\phi$ refers to the empty set. We also allow for representation of formulas that are 
-conjunctions of conjuncts, as sets of the corresponding 
+When it is used as a set, $\phi$ refers to the empty set. 
+We also allow for representation of formulas that are 
+conjunctions, as sets of the corresponding 
 conjuncts. So we represent $c_1 \land ... \land c_n$ as
-$\{c_1, ..., c_n\}$. Conjunction is commutative, associative,
-and repeating the number of times a conjunct occurs in a 
-conjunction doesn't change the meaning of that conjunction, 
-it only adds redundancy - all these properties are captured 
-by the set representation.
+$\{c_1, ..., c_n\}$.
 
 We need the notion of entailment on two levels. Propositional 
 entailment: \\
@@ -211,7 +206,7 @@ read as ``formula $x$ $i$-entails formula $y$", where
 $i$ is the concerned theory. For example, 
 $x > 3 \models_{LIA} x > 0$, where x is an integer variable.
 If we abstracted these formulas to the propositional level, 
-$m := x > 3$, and $n := x > 0$, 
+$m = (x > 3)$, and $n = (x > 0)$, 
 the entailment $m \models_P n$ cannot be realized at the 
 propositional level. We need reasoning at the level of 
 the theory of arithmetic for this entailment to hold.
@@ -225,12 +220,8 @@ $True$. $(x + y = 0) \land (m \lor n)$ is satisfiable,
 and a satisfying assignment is $\{x = 0,\ y = 0,\ m = True,\ 
 n = False\}$. $p \land \neg p$ is unsatisfiable. Two formulas 
 are $equisatisfiable$ if they are both satisfiable, or if they 
-are both unsatisfiable. Notice that the model that 
-satisfies the two formulas isn't taken into account 
-for the definition of equisatisfiability. So $a$ and $b$ are 
-equisatisfiable formulas since $\{a = True,\ b = False\}$ 
-satisfies $a$ and $\{a = False,\ b = True\}$ satisfies b. 
-Two formulas are $equivalent$ if every model that satisfies 
+are both unsatisfiable. Two formulas are $equivalent$ 
+if every model that satisfies 
 one of them satisfies the other as well. Consider 
 $a \land b$ and $a \land b \land n$. These are 
 equisatisfiable since both of them are satisfiable - 
@@ -242,7 +233,7 @@ but not the second one.
 
 A formula is $valid$, if no matter what values we assign its 
 variables, it evaluates to $True$. In other words, it is
-entailed form nothing. For example, \\
+entailed from nothing. For example, \\
 $\models_P p \lor \neg p$, and \\
 $\models_{LIA} (x = 0) \lor (x < 0) \lor (x > 0)$.
 
