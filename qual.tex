@@ -1015,9 +1015,104 @@ and sends it to the interface at Isabelle,
 where the proof is reconstructed.
 
 \subsection{Differences and Similarities}
-Fine-grained vs coarse grained proofs. Eager vs lazy 
-proof production. Explaining DPLL(T).
-Rewriting. Proof production in theories - proof by contradiction.
+All three papers discuss the proof production systems of 
+DPLL(T)-based SMT-solvers. Sections \ref{sec:prelim} to 
+\ref{sec:proofs} essentially explain the concepts that 
+these systems have in common - the DPLL(T) algorithm and 
+resolution-based proofs. Each paper does take a different
+approach in explaining this concept. This report borrows 
+the formalizations of these concepts from 
+~\cite{DBLP:conf/fmcad/KatzBTRH16} which seemed to 
+do the best job of elaboration with examples.
+
+\textit{Eager vs Lazy Proof Production.} CVC4 introduces 
+the idea of lazy proof production in the paper, and argues 
+for their use by presenting evaluations on particular 
+fragments of the solver. The authors also suggest that one 
+approach might work better than the other, depending on 
+the theory solver concerned. Z3 takes an eager approach, 
+in which it skip logging the steps taken by the solver.
+Instead it produces proofs during conflict resolution.
+ 
+\textit{Fine-Grained vs Coarse-Grained Proofs.} CVC4 
+produces fine-grained proofs in which the tinier
+details of the proofs are also accounted for. 
+Input formulas are converted 
+to CNF; the CNF clauses, the learned clauses, and the 
+theory lemmas constitute the leaves of the proof tree.
+While the input clauses are axioms, the learned clauses 
+are entailed by the input formula and this entailment is
+proven by a separate resolution tree fro each clause. 
+Theory clauses are produced by theory solvers which 
+also provide the proofs for these clauses. The advantage 
+of fine-grained proofs is that they are complete, and 
+the proof checker only needs to check them. The disadvantage
+is that the proofs must be well specified by the solver.
+There may be more rules, and since none of the 
+truths in the theories are assumed, they must be specified 
+as well. Proofs in Z3 are more coarse-grained in that they
+have holes in them that the proof assistant must fill in
+during proof checking/reconstruction. These holes might be 
+obvious to fill for certain theories and prove practical 
+in such cases. VeriT, or haRVey in this case, suggests 
+taking a slightly coarse-grained approach as well, since 
+they produce proof hints to the proof assistant to 
+help it reconstruct the proof. However, this was aimed 
+at a particular application, and papers published by 
+the VeriT group seem to have fine-grained proofs 
+~\cite{DBLP:conf/cade/BarbosaBF17}.
+
+\textit{Rewriting.} Formula rewriting is an aspect 
+of SMT solving that wasn't mentioned in this work 
+so far. Apart from conversion to a normal form, 
+theory solves rewrite simple truths in the formula.
+For example, $x + 0$ could be rewritten to $x$. 
+Because of how solvers work to combine multiple 
+theory solvers, these rewrites might complicate 
+things by changing what a formula appears like. In CVC4's
+lazy solvers, it is even more dangerous because 
+solving and proving are decoupled. So a formula may 
+look one way while solving, and be reduced to a 
+rewritten form before the proof is extracted. The 
+solution for this is to store the information of the 
+rewrite so that the proof producer can prove the 
+formula before it was rewritten, and the formula 
+is then rewritten with some justification provided 
+for the rewrite itself. Note that in the experiments 
+that they conducted, the rewrites were still 
+unimplemented, and thus axiomatized. In Z3, the 
+rewrites seem to be prime candidates for the holes
+in the proofs - they are axiomatized and the proof
+checker is expected to prove them.
+
+\textit{Proof Format.} Although these papers don't 
+talk about the formats of their proofs, these solvers
+have other publications that explain in detail their 
+proof format. CVC4 outputs proofs in the LFSC 
+(Logical Framework with Side Conditions) format 
+~\cite{DBLP:journals/fmsd/StumpORHT13} that 
+was developed by many of the same authors as 
+~\cite{DBLP:conf/fmcad/KatzBTRH16}. LFSC is based on 
+a simply typed $\lambda$-calculus with dependent types. 
+The main idea is that the type theory uses the 
+Curry-Howard isomorphism or the propositionas-as-types/
+programs-as-proofs analogy to reduce 
+proof checking to type checking. LFSC takes an 
+input proof term and a signature which declares the 
+constants and functions in the theories, along 
+with the proof rules. In~\cite{Besson2011AFP}, the 
+developers of VeriT proposed a proof format that 
+motivated by SMTLib, a standard syntax for 
+SMT solvers~\cite{BarFT-SMTLIB} which it 
+currently uses. To the best of my knowledge, Z3 
+doesn't have a paper describing its proof format, 
+but it does have its own proof format. Even though 
+SMT solvers have been able to converge on a common 
+input format in SMTLib, the same can't be said for 
+a proof format, as explained in~\cite{Fontaine2014ProofsIS}.
+
+
+Proof production in theories - proof by contradiction.
 \section{Conclusion}
 \label{sec:conc}
 
