@@ -695,12 +695,12 @@ is the logical representation of our conclusion.
 There exist logical calculi - that is sets of inference 
 rules - that, given a set of clauses, can generate all 
 clauses that are logically entailed by this set. In other 
-words, these calculi are $generatively complete$. Resolution 
+words, these calculi are $generatively\ complete$. Resolution 
 is a powerful rule since it alone constitutes a logical 
 calculus. Even though the resolution calculus 
 isn't generatively complete, it has the useful property that 
 if a set of clauses are unsatisfiable, then the calculus will 
-derive the empty clause from this set of clauses. 
+derive the empty clause $\bot$ from this set of clauses. 
 
 
 \subsection{Proofs at the Propositional Level}
@@ -808,6 +808,114 @@ in ~\cite{DBLP:conf/fmcad/KatzBTRH16}.
 
 \subsection{Proofs at the Theory Level}
 \label{sec:theoryproofs}
+\begin{figure}[t]
+\begin{center}
+	\begin{tabular}{l l l l l}
+		\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} 
+		& \textbf{Step}\\
+		\hline
+		& $1, 2 \lor 3, 4, \neg 5, 6$ & $\phi$ & 
+		$Prop^+$ & 1 \\
+		$1\ 4\neg5\ 6$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+		$\phi$ & $Prop_{1}(\neg 1 \lor 2)$ & 2 \\ 
+		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+		$\phi$ & $Confl_{1}(\neg 2 \lor 5)$ & 3 \\
+		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+		$\neg 2 \lor 5$ & $Expl_{1}(\neg 1 \lor 2)$ & 4 \\	
+		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+		$\neg 1 \lor 5$ & $Expl(1)$ & 5 \\
+		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+		$5$ & $Expl(\neg 5)$ & 6 \\
+		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+		$\bot$ & $Fail$ & 7 \\
+	\end{tabular}
+\end{center}
+	
+	\begin{prooftree}
+		\AxiomC{$\neg 5$ (6)}
+		\AxiomC{$EUF\ Proof$}
+		\UnaryInfC{$\neg 2 \lor 5$ (3)}
+		\AxiomC{$EUF\ Proof$}
+		\UnaryInfC{$\neg 1 \lor 2$ (4)}
+		\BinaryInfC{$\neg 1 \lor 5$}
+		\AxiomC{$1$ (5)}
+		\BinaryInfC{$5$}
+		\BinaryInfC{$\bot$}
+	\end{prooftree}
+	\caption{Proof tree for example in Figure~\ref{fig:theoryex}}
+	\label{fig:thoeryproof}
+\end{figure}
+
+At the propositional level, we saw proof trees as being 
+refutation trees that derived $\bot$ at the rooting using
+input clauses and learned clauses at the leaves, with 
+learned clauses supported by satellite resolution proofs. 
+At the theory level, we have clauses called $theory\ lemmas$
+that the theory solvers present to us to help us 
+apply constraints at the theory level. Since the theory solvers 
+come up with the lemmas, the proof is also expected to be 
+at the theory level. And thus the theory solver also 
+provides us with the proof for the lemma. In our refutation tree,
+when we arrive at a leaf with a theory clause, we ask the 
+theory solver for its proof and plug it into the tree.
+
+Figure~\ref{fig:thoeryproof} shows the proof tree for 
+Figure~\ref{fig:theoryex}, reproduced in the figure. The part here
+that is different from the propositional case here is the theory 
+lemmas in steps 3 and 4. Notice these aren't leaves in the proof 
+tree. A proof from the theory solver is plugged in to support 
+these lemmas. The parenthesized numbers indicate the 
+relevant step from the algorithm.
+
+\subsection{Theory Solver Proofs}
+	\label{sec:theorysolverproofs}
+So far, section~\ref{sec:proofs} has presented the 
+proof-producing system of SMT solvers as building 
+refutation trees up to the root containing $\bot$, 
+from leaves that are either inputs or learned clauses 
+with supported proofs. In section~\ref{sec:theoryproofs}
+we added to this picture, the idea of proofs from 
+theory solvers. This section talks about these proofs 
+produced by theory solvers which aren't the resolution 
+proofs we have got used to seeing. Instead, these 
+proofs are in natural deduction~\cite{NatDed}, which 
+is a calculus that is more expressive than the 
+resolution calculus, and can even be generatively 
+complete. The main rule we are concerned with is 
+the $proof\ by\ contradiction$ rule, which works as 
+follows. If you assume $\psi$ and derive $False$, 
+then $\neg \psi$ is true. Theory solvers use 
+theory specific rules along with primarily the 
+proof by contradiction rule, to prove their lemmas.
+
+Consider the following example 
+from~\cite{DBLP:conf/fmcad/KatzBTRH16}.
+The EUF proof for the lemma 
+$L = (x \neq y) \lor (z \neq f(y)) \lor (f(x) = z)$ is 
+as follows. \\
+1. Convert the lemma into its negation: \\
+$\neg L : \neg ((x \neq y) \lor (z \neq f(y)) \lor (f(x) = z))$ \\
+which is equivalent to \\
+$L_1 : (x = y) \land (z = f(y)) \land (f(x) \neq z)$. \\ \\
+
+2. Prove that $L_1$ is false using rules of EUF as necessary. 
+\begin{prooftree}
+	\AxiomC{$f(x) \neq z$}
+	\AxiomC{$x = y$}
+	\RightLabel{Cong.}
+	\UnaryInfC{$f(x) = f(y)$}
+	\AxiomC{$z = f(y)$}
+	\RightLabel{Symm.}
+	\UnaryInfC{$f(y) = z$}
+	\RightLabel{Trans.}
+	\BinaryInfC{$f(x) = z$}
+	\BinaryInfC{$\bot$}
+\end{prooftree}
+The leaves of this contain input formulas, or the literals
+in $L_1$. The congruence rule (Cong.) gives $f(a) = f(b)$, given 
+$a = b$. The other two rules refer to symmetry (Symm.) and 
+transitivity (Trans.) of equality. 
+
 
 \section{Comparison}
 \label{sec:comp}
@@ -1159,8 +1267,43 @@ a proof format, as explained in~\cite{Fontaine2014ProofsIS}.
 
 
 Proof production in theories - proof by contradiction.
-\section{Conclusion}
+\section{Conclusion and Moving Forward}
 \label{sec:conc}
+In this report, I have tried to summarize my investigation
+of the proof production systems of three state-of-the-art 
+SMT solvers - CVC4, Z3, and VeriT. In the process,
+I have learned how SMT solvers produce refutation 
+proofs for the formulas that they solve as unsatisfiable, 
+by combining the internal SAT solver with its theory
+solvers. The papers also explain how theory solvers 
+produce their proofs by means of a natural deduction
+calculus. This report presents these findings after 
+introducing the basic working of an SMT solver. 
+It also compares the the papers of the respective 
+solvers and discusses some points of difference 
+such as granularity of proofs, lazy proof production, 
+and handling of rewrites by the solvers.
+
+The report also mentions the motivation for SMT 
+solvers to produce proofs - these highly automatic 
+tools with thousands of lines of code are ubiquitous 
+in the verification community, and thus would 
+benefit from giving soundness guarantees. One of 
+the papers briefly investigates the connection between 
+an SMT solver and a proof assistant. My motivation 
+is aligned with this kind of work. The Coq proof 
+assistant~\cite{coq} is a popular proof checker 
+that falls in the category of trustable verification 
+tools. SMTCoq~\cite{DBLP:conf/cav/EkiciMTKKRB17} is a 
+Coq plugin that is able to leverage the power of an 
+SMT solver to prove goals in Coq. The support 
+for CVC4 in SMTCoq has been implemented for a 
+few theories by my advisor, Cesare Tinelli's 
+research group at the Computer Science Department 
+at the University of Iowa. My goal is to extend 
+this support to other theories and the literature 
+survey of the proof producing systems of SMT solvers
+is an important step toward that goal.
 
 \bibliographystyle{abbrv}
 \bibliography{bib}
