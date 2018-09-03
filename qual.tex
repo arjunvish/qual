@@ -52,7 +52,7 @@ formula. For unsatisfied formulas, it is a transformation of
 the formula into a simple contradiction using a small set of 
 inference rules, checkable by an external tool such as a proof 
 checker. This report describes the proof producing mechanisms 
-commonly used SMT solvers and compares the proof systems 
+commonly used in SMT solvers and compares the proof systems 
 of CVC4, VeriT, and Z3, three state-of-the-art SMT solvers.
 \end{abstract}
 
@@ -111,7 +111,7 @@ outputs, that can be checked by the proof checker.
 
 In this report, I introduce the workings of an SMT solver 
 and their proof producing capabilities; I also compare the 
-proof systems of CVC4, VeriT, VeriT and Z3 - three 
+proof systems of CVC4, VeriT, and Z3 - three 
 state-of-the-art SMT solvers - as respectively 
 described in the research papers titled ``Lazy Proofs for 
 DPLL(T)-Based SMT Solvers"~\cite{DBLP:conf/fmcad/KatzBTRH16}, 
@@ -119,7 +119,7 @@ DPLL(T)-Based SMT Solvers"~\cite{DBLP:conf/fmcad/KatzBTRH16},
 Towards Combining SMT Solvers and Interactive 
 Proof Assistants"~\cite{DBLP:conf/tacas/FontaineMMNT06}, 
 and ``Proofs and Refutations, and Z3"~\cite{DBLP:conf/lpar/MouraB08}.
-I begin by explain the algorithm that is at the core 
+I begin by explaining the algorithm that is at the core 
 of most SMT solvers. I then explain the logical basis for 
 proof production in SMT solvers, and then get into 
 comparing the research work as I explain the proof 
@@ -135,7 +135,7 @@ will use:
 &Constant &\rightarrow\ &c_1\ |\ c_2\ |\ ...  \\
 &Term &\rightarrow\ &Variable\ |\ Constant\ |\ f(t_1, ..., t_n) \\
 &Literal &\rightarrow\ &Term\ |\ \neg Term \\
-&Formula &\rightarrow\ &True\ |\ False |\ p(t_1, ..., t_n)\ 
+&Formula &\rightarrow\ &True\ |\ False\ |\ p(t_1, ..., t_n)\ 
 					|\ Literal\ |\ Literal \lor Literal \\ 
 & & &				|\ Literal \land Literal\ 
 					|\ Literal \Rightarrow Literal\ 
@@ -157,7 +157,9 @@ predicate. The theories also share a set of
 uninterpreted constants which are used for reasoning about 
 terms that belong to multiple theories. 
 
-This formalizes the fact that the framework here is 
+\begin{framed}
+The preceding part of this section formalizes the fact 
+that the framework here is 
 described for a single theory, but that theory can 
 be considered a combination of multiple 
 theories~\cite{Manna2003}. This means that formulas are 
@@ -167,7 +169,8 @@ we have theories, these components could be just Boolean
 variables, or they could be (dis)equalities over our 
 multiple theories, which gives us expressivity. 
 
-For example, is over the theory of linear integer 
+For example, the following formula is over 
+the theory of linear integer 
 arithmetic (LIA) and the theory of 
 equality over uninterpreted functions (EUF)
 ~\cite{LIAEUF}.\\
@@ -184,25 +187,27 @@ will stick to intuitive theories such as the ones mentioned
 before, so we don't have to deal with such formalisms. A 
 formal definition of theories and SMT can be found at 
 ~\cite{DBLP:reference/mc/BarrettT18}.
+\end{framed}
 
 When it is used as a set, $\phi$ refers to the empty set. We also allow for representation of formulas that are 
 conjunctions of conjuncts, as sets of the corresponding 
 conjuncts. So we represent $c_1 \land ... \land c_n$ as
-$\{c_1, ..., c_n\}$. This is a useful representation, 
-since conjunction is commutative, associative, and 
-repeating the number of times a conjunct occurs in a 
+$\{c_1, ..., c_n\}$. Conjunction is commutative, associative,
+and repeating the number of times a conjunct occurs in a 
 conjunction doesn't change the meaning of that conjunction, 
-it only adds redundancy.
+it only adds redundancy - all these properties are captured 
+by the set representation.
 
-We have the notion of entailment on two levels. Propositional 
+We need the notion of entailment on two levels. Propositional 
 entailment: \\
 $p \models_P q$ \\
 read as ``formula $p$ propositionally entails formula $q$" says 
 that $q$ is a logical consequence of $p$. For example, 
 $a \land b \models_P a$, where a and b are Boolean 
-variables. Entailment also occurs in a theory:
+variables. Entailment also occurs in a theory: \\
 $x \models_i y$ \\
-read as ``formula $x$ $i$-entails formula $y$". For example, 
+read as ``formula $x$ $i$-entails formula $y$", where 
+$i$ is the concerned theory. For example, 
 $x > 3 \models_{LIA} x > 0$, where x is an integer variable.
 If we abstracted these formulas to the propositional level, 
 $m := x > 3$, and $n := x > 0$, 
@@ -216,22 +221,22 @@ so that the formula evaluates to $True$. A formula is
 $unsatisfiable$ if there is no consistent assignment that 
 we can give its variables so that the formula evaluates to 
 $True$. $(x + y = 0) \land (m \lor n)$ is satisfiable, 
-and a satisfying assignment is $\{x = 0, y = 0, m = True, 
+and a satisfying assignment is $\{x = 0,\ y = 0,\ m = True,\ 
 n = False\}$. $p \land \neg p$ is unsatisfiable. Two formulas 
-are $equisatisfiable$ if they are both satisfiable, or they 
+are $equisatisfiable$ if they are both satisfiable, or if they 
 are both unsatisfiable. Notice that the model that 
 satisfies the two formulas isn't taken into account 
 for the definition of equisatisfiability. So $a$ and $b$ are 
-equisatisfiable formulas since $\{a = True, b = False\}$ 
-satisfies $a$ and $\{a = False, b = True\}$ satisfies b. 
+equisatisfiable formulas since $\{a = True,\ b = False\}$ 
+satisfies $a$ and $\{a = False,\ b = True\}$ satisfies b. 
 Two formulas are $equivalent$ if every model that satisfies 
 one of them satisfies the other as well. Consider 
 $a \land b$ and $a \land b \land n$. These are 
 equisatisfiable since both of them are satisfiable - 
-$\{a = True, b = True\}$ satisfies the first one and 
-$\{a = True, b = True, n = True\}$ satisfies the second one.
+$\{a = True,\ b = True\}$ satisfies the first one and 
+$\{a = True,\ b = True,\ n = True\}$ satisfies the second one.
 However, they are not equivalent since model 
-$\{a = True, b = True, n = False\}$ satisfies the first one, 
+$\{a = True,\ b = True,\ n = False\}$ satisfies the first one, 
 but not the second one.
 
 A formula is $valid$, if no matter what values we assign its 
@@ -263,21 +268,21 @@ Section~\ref{sec:cnf}
 introduces the normal form required by these solvers, 
 and Section~\ref{sec:trans} explains the DPLL(T) algorithm as a 
 transition system as presented 
-in~\cite{DBLP:conf/fmcad/2016}
+in~\cite{DBLP:conf/fmcad/KatzBTRH16}.
 
 \subsection{CNF Conversion}
 \label{sec:cnf}
+\begin{framed}
 SMT solvers require that the input formula is converted to a 
 normal form called conjunctive normal form (CNF), before they 
 start solving them. The CNF of a formula represents the 
 formula as a conjunction of disjunctions. A clause is a 
 disjunction (Boolean OR) of variables. So CNF is a 
 conjunction (Boolean AND) of clauses. 
+\end{framed}
 
 Using Tseitin clausification~\cite{BEL01Handbook}, any formula 
-can be converted into an equisatisfiable CNF formula 
-in linear time. Formulas F and G are equisatisfiable if 
-every model that satisfies F also satisfies G and vice-versa.
+can be converted into an equisatisfiable CNF formula.
 
 The following is an example where a set of rewrite rules
 are applied to F to convert it into CNF. 
@@ -304,6 +309,10 @@ and $x_2$ for all subterms of F by means of equivalence
 between the subterm and the fresh variable. Steps 3 and 4 
 reduce these subterms to CNF by common rewrite rules 
 such as distribution and De Morgan's law.
+
+This example is to illustrate that the conversion can be done.
+There are many optimizations that are applied in addition, 
+that keep the normal form's size in check.
 
 
 \subsection{Abstract DPLL(T) Framework}
@@ -367,10 +376,11 @@ CNF - by assigning truth values to terms so that it can
 satisfy all input clauses. It is easy to satisfy a single
 clause, because to satisfy a disjunction, it suffices to
 assign one of the disjuncts to True. DPLL(T) carries out
-assignments through logical reasoning, or by guessing. If a
+assignments through logical reasoning, and when that 
+fails, by guessing. If a
 guess leads to an unsuccessful assignment of the formula 
-(a conflict), then the algorithm reverses the guess. 
-If there are no more guesses to reverse, then the formula is
+(a conflict), then the algorithm flips the guess. 
+If there are no more guesses to flip, then the formula is
 unsatisfiable.
 
 DPLL(T) solvers can be formalized abstractly as 
@@ -429,22 +439,40 @@ propositional level, or just DPLL.
 They model the behavior of the SAT engine, 
 which treats atoms
 as Boolean variables. Propagations (Prop) allow us to assign 
-literals that we are forced to assign by the logic. We 
-might not always have this luxury; sometimes, we may have 
+literals that we are forced to assign by the logic. 
+For example, if the input formula is $\neg a \land a \lor b$, 
+then $a$ must be assigned to $False$, so that the $\neg a$ 
+conjunct evaluates to $True$. As a consequence, of this, 
+$b$ must be $True$ so that the next conjunct is $True$. Both 
+of these assignments are propagations that the logic forces 
+us to assign, given that we are trying to satisfy the formula.
+We might not always have this luxury; sometimes, we may have 
 to make a guess on an assignment, and decisions (Dec) let us do 
-this. Propogations and/or decisions could lead us to 
+this. If we are trying to satisfy 
+$(\neg a \lor c) \land (\neg b \lor d) \land (a \lor b)$,
+each conjunct is a 
+formula, so we need to guess the value of one of the literals. 
+Let's say we guess $a = False$ and then $b = False$ 
+to satisfy the first two conjuncts.
+Propogations and/or decisions could lead us to 
 a point where our current assignment conflicts with 
 our goal of trying to satisfy the input formula. The 
-conflict rule (Confl) recognizes this. If we encounter a conflict, 
+conflict rule (Confl) recognizes this. In the previous 
+example, $\{a = False,\ b = False\}$ satisfies the first two
+clauses, but falsifies the third, so the third clause 
+$a \lor b$ is recognized as a conflict clause.
+If we encounter a conflict, 
 and there were no previous decisions made, then we were 
 forced by the logic to arrive at that conflict, so we 
 conclude that the input formula is unsatisfiable. The Fail 
 rule ensures this. If, there are previous decisions at
-the time of conflict, then the explain rule (Expl) undoes 
-propagations on top of conflicts, so we can get to a 
-potentially wrong decision that we made, in order to
-take the path down the opposite guess. Flipping a guess 
-is handled by the backjump rule (Backj). A conflict clause always 
+the time of conflict, then the explain rule (Expl) 
+and the backjump rule (Backj) work together to rewind 
+the state to a point where the decision is flipped. 
+Decisions cause propagations, and once we suspect that 
+a decision was a wrong decision, we want to undo the 
+propagations that were caused by it. This is intuitively 
+what the explain rule does. Once this is done, the backjump rule is able to flip the decision. A conflict clause always 
 consists of a formula that is entailed by the input formula. 
 Explanations could transform the conflict 
 clause into a clause that we didn't have to begin with, 
@@ -453,18 +481,19 @@ The Learn rule allows us
 to add a non-empty conflict clause to the input clauses to be 
 satisfied. 
 
-Consider the following example from~\cite{DBLP:conf/fmcad/2016}.
+Consider the following example from~\cite{DBLP:conf/fmcad/KatzBTRH16}.
 The formula F expressed as a set in CNF is:
 \begin{center}
 $\{a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b\}$
 \end{center}
-Figure~\ref{fig:propex} shows how the DPLL solves this 
+Figure~\ref{fig:propex} shows how DPLL solves this 
 formula. Notice that at Step 11, the $Fail$ rule can be 
 applied to conclude that the formula is unsatisfiable, and 
 this is what the solver would typically do. However, for 
 producing a proof of unsatisfiability, it is necessary for the 
 conflict clause to be the empty clause $\bot$, and hence the 
-solver explains on the conflict instead. A few steps later, 
+solver explains on the conflict instead (explained in 
+section \ref{sec:proofs}). A few steps later, 
 the solver does conclude that the formula is unsatisfiable, 
 while deriving the most basic conflict, the empty clause.
 
@@ -535,7 +564,39 @@ provided by that theory.
 	\label{fig:propex}
 \end{figure}
 
-\textcolor{red}{THOERY EXAMPLE}
+\textcolor{red}{THEORY EXAMPLE}
+Consider the following example from~\cite{DBLP:conf/fmcad/KatzBTRH16}. Theory $T$ is a 
+combination of the $T_1$ - theory of equality over uninterpreted 
+functions (EUF) and $T_2$ = the theory of arrays with 
+extensionality (AX). In the theory of arrays, $a[i]$ 
+denotes the result of reading the value at index $i$ of 
+array $a$ and $a[i] := b$ denotes the result of writing 
+value $b$ at index $i$ of array $a$. The input formula for 
+the solver consists of the following literals:
+1 : 
+\begin{framed}
+At a high level, DPLL(T) takes a formula in CNF, and tries 
+to satisfy every conjunct. There are two levels of reasoning 
+- propositional and theory. The algorithm can be understood as 
+always working in the propositional level (thoery literals
+are abstracted to propositional ones), trying to 
+satisfy the formula. If the formula is propositionally 
+unsatisfiable, then the algorithm concludes, without any 
+theory reasoning that the formula is unsatisfiable. However, 
+if the formula is propositionally satisfiable by a model, 
+then the SAT solver sends the satisfying model to the 
+theory solver(s) concerned to check whether it is satisfiable
+at the thoery level as well. If it is satisfiable in the 
+theory level, then the solver returns to the user that 
+the formula is satisfiable. If the theory solver finds an 
+inconsistency, it sends back information to the 
+propositional solver, restricting the current model, 
+and the solver tries again. If the propositional solver 
+is unable to please all the theory solvers 
+for any model that it finds at the propositional level, then
+we conclude by exhaustion that the formula is unsatisfiable.
+\end{framed} 
+
 
 \section{DPLL(T) Proofs}
 \label{sec:proofs}
@@ -701,10 +762,23 @@ in ~\cite{DBLP:conf/fmcad/KatzBTRH16}.
 \subsection{Proofs at the Theory Level}
 \label{sec:theoryproofs}
 
-\section{Comparison of Solvers}
+\section{Comparison}
 \label{sec:comp}
 This section compares the proof systems of 3 state-of-the-art 
-solvers CVC4, Z3, and VeriT as described in .
+solvers CVC4, Z3, and VeriT as described in~\cite{DBLP:conf/fmcad/KatzBTRH16},~\cite{DBLP:conf/lpar/MouraB08}, 
+and~\cite{DBLP:conf/tacas/FontaineMMNT06} respectively.
+
+Although each paper introduces proof production in an SMT 
+solver, they are from different times, and aimed at different 
+goals. 
+\subsection{CVC4}
+
+\subsection{Z3}
+
+\subsection{VeriT}
+
+Fine-grained vs coarse grained proofs. Eager vs lazy 
+proof production.
 
 \section{Conclusion}
 \label{sec:conc}
