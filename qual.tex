@@ -317,73 +317,32 @@ that keep the normal form's size in check.
 
 
 \subsection{Abstract DPLL(T) Framework}
-\label{sec:trans}
+\label{sec:abst}
+\begin{framed}
+	At a high level, DPLL(T) takes a formula in CNF, and tries 
+	to satisfy every conjunct. There are two levels of reasoning 
+	- propositional and theory. The algorithm can be understood as 
+	always working in the propositional level (thoery literals
+	are abstracted to propositional ones), trying to 
+	satisfy the formula. If the formula is propositionally 
+	unsatisfiable, then the algorithm concludes, without any 
+	theory reasoning that the formula is unsatisfiable. However, 
+	if the formula is propositionally satisfiable by a model, 
+	then the SAT solver sends the satisfying model to the 
+	theory solver(s) concerned to check whether it is satisfiable
+	at the thoery level as well. If it is satisfiable in the 
+	theory level, then the solver returns to the user that 
+	the formula is satisfiable. If the theory solver finds an 
+	inconsistency, it sends back information to the 
+	propositional solver, restricting the current model, 
+	and the solver tries again. If the propositional solver 
+	is unable to please all the theory solvers 
+	for any model that it finds at the propositional level, then
+	we conclude by exhaustion that the formula is unsatisfiable.
+\end{framed}
 
-\begin{figure}[t]
-	\centering
-	\begin{framed}
-		\begin{tabular}{c}
-			$\infer[Prop]{M := Ml}{l_1 \lor ... \lor l_n \lor l \in F 
-				& \neg l_1,...,\neg l_n \in M & l, \neg l \notin M}$ \\ \\
-			$\infer[Dec]{M := M \bullet l}
-			{l \in Lit_F \cup Int_M & l, \neg l \notin M}$ \\ \\
-			$\infer[Confl]{C:=\{l_1 \lor ... \lor l_n\}}
-			{C = \phi & l_1 \lor ... \lor l_n \in F & \neg l_1,...,\neg l_n \in M}$ \\ \\
-			$\infer[Expl]{C := \{l_1 \lor ... \lor l_n \lor D\}}
-			{C = \{\neg l \lor D\} & l_1 \lor ... \lor l_n \lor l \in F 
-				& \neg l_1,...,\neg l_n \prec_M l}$ \\ \\
-			$\infer[Backj]{C := \phi\ \ \ M := M^{[i]}l}
-			{C = \{l_1 \lor ... \lor l_n \lor l\} & 
-				lev\ \neg l_1, ... , lev\ \neg l_n \leq i < lev\ \neg l}$ \\ \\
-			$\infer[Learn]{F := F \cup C}{C \neq \phi}$ \\ \\
-			$\infer[Fail]{fail}{C \neq \phi & \bullet \notin M}$ \\ \\
-		\end{tabular}
-	\end{framed}
-	\caption{Transition rules at Propositional level}
-	\label{fig:proprules}
-\end{figure}
-
-\begin{figure}[t]
-	\centering
-	\begin{framed}
-		\begin{tabular}{c}
-			
-			$\infer[Prop_i]{M := Ml}	{l \in Lit_F \cup Int_M & 
-				\models_i l_1 \lor ... \lor 
-				l_n \lor l & \neg l_1, ..., \neg l_n \in M & l,\neg l \notin M}$ \\ \\
-			$\infer[Confl_i]{C := \{l_1 \lor ... \lor l_n \}}
-			{C = \phi & \models_i l_1 \lor ... \lor l_n & 
-				\neg l_1, ..., \neg l_n \in M}$ \\ \\
-			$\infer[Expl_i]{C := \{l_1 \lor ... \lor l_n \lor D\}}
-			{C = \{\neg l \lor D\} & \models_i l_1 \lor ... \lor l_n \lor l & 
-				\neg\ l_1, ..., \neg\ l_n \prec_M l}$ \\ \\
-			$\infer[Learn_i]{F := F \cup \{l_1[\textbf{c}] 
-				\lor ... \lor l_n[\textbf{c}]\}}
-			{l_1,...,l_n \in Lit_{M|i} \cup Int_M \cup L_i & 
-				\models_i \exists \textbf{x}(l_1[\textbf{x}] \lor ... 
-				\lor l_n[\textbf{x}])}$ \\ \\
-		\end{tabular}
-	\end{framed}
-	\caption{Transition rules at Theory level. $\textbf{x}$ is a possibly empty 
-		tuple of variables, and $\textbf{c}$ is a tuple of fresh constants 
-		from $C$ - the set of shared constants between the sorts - of the
-		same sort as $\textbf{x}$; $L_i$ is a finite set consisting of literals
-		not present in the original formula $F$.}
-	\label{fig:theoryrules}
-\end{figure}
-
-DPLL(T) tries to satisfy the input formula - converted to 
-CNF - by assigning truth values to terms so that it can
-satisfy all input clauses. It is easy to satisfy a single
-clause, because to satisfy a disjunction, it suffices to
-assign one of the disjuncts to True. DPLL(T) carries out
-assignments through logical reasoning, and when that 
-fails, by guessing. If a
-guess leads to an unsuccessful assignment of the formula 
-(a conflict), then the algorithm flips the guess. 
-If there are no more guesses to flip, then the formula is
-unsatisfiable.
-
+\subsubsection{Transition System}
+	\label{sec:trans}
 DPLL(T) solvers can be formalized abstractly as 
 state transition systems defined by a set of transition rules.\\
 The states of a system are either
@@ -415,8 +374,8 @@ Final state:
 $Int_M$ is the set of all \textit{interface literals} of M:
 the (dis)equalities between shared constants. \\
 \textit{Shared constants} are the set represented by \\
-$\{c\ |\ constant\ c\ occurs\ in\ Lit_{M|i} and Lit_{M|j}, 
-for\ some 1 \leq i < j \leq m\}$. \\
+$\{c\ |\ constant\ c\ occurs\ in\ Lit_{M|i}\ and\ Lit_{M|j},\ 
+for\ some\ 1 \leq i < j \leq m\}$. \\
 $Lit_{M|i}$ consists of the $\Sigma_i$- literals of $Lit_M$. \\
 These technicalities are necessary for solving of clauses 
 that are a combination of multiple theories. 
@@ -434,14 +393,42 @@ functions, and one over arithmetic ones. \\
 
 The rules of the transition systems can be split into a 
 set of propositional rules, and a set of theory rules. 
+
+\subsubsection{Propositional Rules}
+	\label{sec:proprules}
+	
+\begin{figure}[t]
+	\centering
+	\begin{framed}
+		\begin{tabular}{c}
+			$\infer[Prop]{M := Ml}{l_1 \lor ... \lor l_n \lor l \in F 
+				& \neg l_1,...,\neg l_n \in M & l, \neg l \notin M}$ \\ \\
+			$\infer[Dec]{M := M \bullet l}
+			{l \in Lit_F \cup Int_M & l, \neg l \notin M}$ \\ \\
+			$\infer[Confl]{C:=\{l_1 \lor ... \lor l_n\}}
+			{C = \phi & l_1 \lor ... \lor l_n \in F & \neg l_1,...,\neg l_n \in M}$ \\ \\
+			$\infer[Expl]{C := \{l_1 \lor ... \lor l_n \lor D\}}
+			{C = \{\neg l \lor D\} & l_1 \lor ... \lor l_n \lor l \in F 
+				& \neg l_1,...,\neg l_n \prec_M l}$ \\ \\
+			$\infer[Backj]{C := \phi\ \ \ M := M^{[i]}l}
+			{C = \{l_1 \lor ... \lor l_n \lor l\} & 
+				lev\ \neg l_1, ... , lev\ \neg l_n \leq i < lev\ \neg l}$ \\ \\
+			$\infer[Learn]{F := F \cup C}{C \neq \phi}$ \\ \\
+			$\infer[Fail]{fail}{C \neq \phi & \bullet \notin M}$ \\ \\
+		\end{tabular}
+	\end{framed}
+	\caption{Transition rules at Propositional level}
+	\label{fig:proprules}
+\end{figure}
+
 Figure~\ref{fig:proprules} enumerates the propositional rules.
-These rules alone constitute the DPLL(T) algorithm at the
+These rules constitute the DPLL(T) algorithm at the
 propositional level, or just DPLL.
 They model the behavior of the SAT engine, 
 which treats atoms
 as Boolean variables. Propagations (Prop) allow us to assign 
 literals that we are forced to assign by the logic. 
-For example, if the input formula is $\neg a \land a \lor b$, 
+For example, if the input formula is $\neg a \land (a \lor b)$, 
 then $a$ must be assigned to $False$, so that the $\neg a$ 
 conjunct evaluates to $True$. As a consequence, of this, 
 $b$ must be $True$ so that the next conjunct is $True$. Both 
@@ -453,14 +440,14 @@ this. If we are trying to satisfy
 $(\neg a \lor c) \land (\neg b \lor d) \land (a \lor b)$,
 each conjunct is a 
 formula, so we need to guess the value of one of the literals. 
-Let's say we guess $a = False$ and then $b = False$ 
-to satisfy the first two conjuncts.
 Propogations and/or decisions could lead us to 
 a point where our current assignment conflicts with 
 our goal of trying to satisfy the input formula. The 
 conflict rule (Confl) recognizes this. In the previous 
-example, $\{a = False,\ b = False\}$ satisfies the first two
-clauses, but falsifies the third, so the third clause 
+example, assume we came up with the assignment 
+$\{a = False,\ b = False\}$ by decisions. This assignment 
+satisfies the first two clauses, but falsifies the third, 
+so the third clause 
 $a \lor b$ is recognized as a conflict clause.
 If we encounter a conflict, 
 and there were no previous decisions made, then we were 
@@ -482,6 +469,50 @@ The Learn rule allows us
 to add a non-empty conflict clause to the input clauses to be 
 satisfied. 
 
+
+\subsubsection{DPLL Example}
+	\label{sec:propex}
+\begin{figure}[t]
+	\begin{center}
+		\begin{tabular}{l l l l l}
+			\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} & \textbf{Step}\\
+			\hline
+			& $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ 
+			& $\phi$ & Dec & 1 \\
+			$\bullet a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b$ & $\phi$ & Prop ($a \lor \neg b$) & 2 \\
+			$\bullet a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b$ & $\phi$ & Prop $(b \lor c)$ & 3 \\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b$ & $\phi$ & Confl $(\neg c \lor b)$ & 4 \\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 5 \\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b$ & $b$ & Expl $(\neg a \lor \neg b)$ & 6 \\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b$ & $\neg a$ & Learn $(\neg a)$ & 7\\
+			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
+			b \lor c, \neg c \lor b, \neg a$ & $\neg a$ & Backj $(\neg a)$ & 8 \\
+			$\neg a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\phi$ & Prop $(a \lor \neg b)$ & 9 \\
+			$\neg a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\phi$ & Prop $(b \lor c)$ & 10 \\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\phi$ & Confl $(\neg c \lor b)$ & 11 \\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 12 \\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $b$ & Expl $(a \lor \neg b)$ & 13\\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $a$ & Expl $(\neg a)$ & 14 \\
+			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
+			\neg c \lor b, \neg a$ & $\bot$ & Fail & 15 \\
+		\end{tabular}
+	\end{center}
+	\caption{Example for Propositional level DPLL(T)}
+	\label{fig:propex}
+\end{figure}
+
 Consider the following example from~\cite{DBLP:conf/fmcad/KatzBTRH16}.
 The formula F expressed as a set in CNF is:
 \begin{center}
@@ -497,6 +528,39 @@ solver explains on the conflict instead (explained in
 section \ref{sec:proofs}). A few steps later, 
 the solver does conclude that the formula is unsatisfiable, 
 while deriving the most basic conflict, the empty clause.
+
+
+\subsubsection{Theory Rules}
+		\label{sec:theoryrules}
+
+\begin{figure}[t]
+	\centering
+	\begin{framed}
+		\begin{tabular}{c}
+			
+			$\infer[Prop_i]{M := Ml}	{l \in Lit_F \cup Int_M & 
+				\models_i l_1 \lor ... \lor 
+				l_n \lor l & \neg l_1, ..., \neg l_n \in M & l,\neg l \notin M}$ \\ \\
+			$\infer[Confl_i]{C := \{l_1 \lor ... \lor l_n \}}
+			{C = \phi & \models_i l_1 \lor ... \lor l_n & 
+				\neg l_1, ..., \neg l_n \in M}$ \\ \\
+			$\infer[Expl_i]{C := \{l_1 \lor ... \lor l_n \lor D\}}
+			{C = \{\neg l \lor D\} & \models_i l_1 \lor ... \lor l_n \lor l & 
+				\neg\ l_1, ..., \neg\ l_n \prec_M l}$ \\ \\
+			$\infer[Learn_i]{F := F \cup \{l_1[\textbf{c}] 
+				\lor ... \lor l_n[\textbf{c}]\}}
+			{l_1,...,l_n \in Lit_{M|i} \cup Int_M \cup L_i & 
+				\models_i \exists \textbf{x}(l_1[\textbf{x}] \lor ... 
+				\lor l_n[\textbf{x}])}$ \\ \\
+		\end{tabular}
+	\end{framed}
+	\caption{Transition rules at Theory level. $\textbf{x}$ is a possibly empty 
+		tuple of variables, and $\textbf{c}$ is a tuple of fresh constants 
+		from $C$ - the set of shared constants between the sorts - of the
+		same sort as $\textbf{x}$; $L_i$ is a finite set consisting of literals
+		not present in the original formula $F$.}
+	\label{fig:theoryrules}
+\end{figure}
 
 The rules in Figure~\ref{fig:theoryrules} model the 
 interaction between the SAT solver and the theory solvers.
@@ -524,79 +588,61 @@ to their propositional versions except that each rule is
 associated to a theory $i$ and operates on lemmas 
 provided by that theory. 
 
+
+\subsubsection{DPLL(T) Example}
+\label{sec:thoeryex}
+
 \begin{figure}[t]
-\begin{center}
-\begin{tabular}{l l l l l}
-	\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} & \textbf{Step}\\
-	\hline
-	& $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ 
-		& $\phi$ & Dec & 1 \\
-	$\bullet a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-		\neg c \lor b$ & $\phi$ & Prop ($a \lor \neg b$) & 2 \\
-	$\bullet a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, 
-		b \lor c, \neg c \lor b$ & $\phi$ & Prop $(b \lor c)$ & 3 \\
-	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
-		b \lor c, \neg c \lor b$ & $\phi$ & Confl $(\neg c \lor b)$ & 4 \\
-	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-		\neg c \lor b$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 5 \\
-	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
-		b \lor c, \neg c \lor b$ & $b$ & Expl $(\neg a \lor \neg b)$ & 6 \\
-	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
-		b \lor c, \neg c \lor b$ & $\neg a$ & Learn $(\neg a)$ & 7\\
-	$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
-		b \lor c, \neg c \lor b, \neg a$ & $\neg a$ & Backj $(\neg a)$ & 8 \\
-	$\neg a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-		\neg c \lor b, \neg a$ & $\phi$ & Prop $(a \lor \neg b)$ & 9 \\
-	$\neg a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-		\neg c \lor b, \neg a$ & $\phi$ & Prop $(b \lor c)$ & 10 \\
-	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-		\neg c \lor b, \neg a$ & $\phi$ & Confl $(\neg c \lor b)$ & 11 \\
-	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-		\neg c \lor b, \neg a$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 12 \\
-	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-		\neg c \lor b, \neg a$ & $b$ & Expl $(a \lor \neg b)$ & 13\\
-	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-		\neg c \lor b, \neg a$ & $a$ & Expl $(\neg a)$ & 14 \\
-	$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-		\neg c \lor b, \neg a$ & $\bot$ & Fail & 15 \\
-\end{tabular}
-\end{center}
+	\begin{center}
+		\begin{tabular}{l l l l l}
+			\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} 
+			& \textbf{Step}\\
+			\hline
+			& $1, 2 \lor 3, 4, \neg 5, 6$ & $\phi$ & 
+			$Prop^+$ & 1 \\
+			$1\ 4\neg5\ 6$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+			$\phi$ & $Prop_{1}(\neg 1 \lor 2)$ & 2 \\ 
+			$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+			$\phi$ & $Confl_{1}(\neg 2 \lor 5)$ & 3 \\
+			$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+			$\neg 2 \lor 5$ & $Expl_{1}(\neg 1 \lor 2)$ & 4 \\	
+			$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+			$\neg 1 \lor 5$ & $Expl(1)$ & 5 \\
+			$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+			$5$ & $Expl(\neg 5)$ & 6 \\
+			$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
+			$\bot$ & $Fail$ & 7 \\
+		\end{tabular}
+	\end{center}
 	\caption{Example for Propositional level DPLL(T)}
-	\label{fig:propex}
+	\label{fig:theoryex}
 \end{figure}
 
-\textcolor{red}{THEORY EXAMPLE}
-Consider the following example from~\cite{DBLP:conf/fmcad/KatzBTRH16}. Theory $T$ is a 
-combination of the $T_1$ - theory of equality over uninterpreted 
-functions (EUF) and $T_2$ = the theory of arrays with 
-extensionality (AX). In the theory of arrays, $a[i]$ 
-denotes the result of reading the value at index $i$ of 
-array $a$ and $a[i] := b$ denotes the result of writing 
-value $b$ at index $i$ of array $a$. The input formula for 
-the solver consists of the following literals:
-1 : 
-\begin{framed}
-At a high level, DPLL(T) takes a formula in CNF, and tries 
-to satisfy every conjunct. There are two levels of reasoning 
-- propositional and theory. The algorithm can be understood as 
-always working in the propositional level (thoery literals
-are abstracted to propositional ones), trying to 
-satisfy the formula. If the formula is propositionally 
-unsatisfiable, then the algorithm concludes, without any 
-theory reasoning that the formula is unsatisfiable. However, 
-if the formula is propositionally satisfiable by a model, 
-then the SAT solver sends the satisfying model to the 
-theory solver(s) concerned to check whether it is satisfiable
-at the thoery level as well. If it is satisfiable in the 
-theory level, then the solver returns to the user that 
-the formula is satisfiable. If the theory solver finds an 
-inconsistency, it sends back information to the 
-propositional solver, restricting the current model, 
-and the solver tries again. If the propositional solver 
-is unable to please all the theory solvers 
-for any model that it finds at the propositional level, then
-we conclude by exhaustion that the formula is unsatisfiable.
-\end{framed} 
+Consider the following example that consists of terms 
+in the theory of equality over uninterpreted 
+functions (EUF). Since this is the only theory we consider 
+$T$ the to be the combination of $T_1 = EUF$.
+The input formula for the solver 
+in CNF is: \\
+$(a = b) \land (f(a) = f(b) \lor f(g(a)) = h(b)) \land
+(f(a) = c) \land (c \neq d) \land (f(b) = d)$ \\
+Abstracting the terms, we get: \\
+$1 \land (2 \lor 3) \land 4 \land \neg 5 \land 6$ \\
+DPLL(T)'s execution on the example is shown in 
+Figure\ref{fig:theoryex}. The interesting steps here 
+are steps 2 to 4 that use theory lemmas. The clauses 
+$\neg 1 \lor 2$ and $\neg 2 \lor 5$ are theory lemmas.
+Intuitively, they are saying "if 1 is true, then 2 is 
+true" (by congruence), and "if 2 is true, then 5 is true"
+(from the information gained from 2,4, and 6), respectively. 
+Essentially, these clauses are valid in the theory of 
+EUF, and the solver conveniently gives us these lemmas 
+to help us solve the problem at the propositional level.
+As in the propositional example, we could've used 
+the Fail rule after the conflict to conclude that 
+the formula is unsatisfiable (Step 4), but we want 
+to reduce the conflict clause to the empty disjunction
+$\bot$ since it will help us with our proof.
 
 
 \section{DPLL(T) Proofs}
