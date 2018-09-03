@@ -4,7 +4,8 @@
 \usepackage{xcolor}
 \usepackage{url}
 \usepackage{framed}
-\usepackage{amsmath}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{mathtools}
 
 \begin{document}
 \begin{titlepage}
@@ -99,7 +100,7 @@ Given their rise in popularity and usage in the software
 verification world, it is really important that we are able 
 to trust the outputs of SMT solvers. SMT solvers are typically 
 very complex systems with tens of thousands of lines of code, 
-liable to contain bugs. Verifying such a large codebase can 
+likely to contain bugs. Verifying such a large codebase can 
 be a cumbersome, if not impossible task. An alternative is 
 to rely on tools called proof checkers~\cite{proofasst}, 
 that have a much more trusted kernel containing a small 
@@ -770,16 +771,253 @@ and~\cite{DBLP:conf/tacas/FontaineMMNT06} respectively.
 
 Although each paper introduces proof production in an SMT 
 solver, they are from different times, and aimed at different 
-goals. 
+goals. This section begins by summarizing each paper and then 
+comparing the proof production systems by some particular 
+metrics.
+
 \subsection{CVC4}
+\label{sec:cvc4}
+The proof production system of the CVC4 SMT solver is described 
+in \cite{DBLP:conf/fmcad/KatzBTRH16}. The paper introduces the 
+concept of lazy proof production for SMT solvers. In DPLL(T) 
+the SAT solver reasons about the input formula using feedback 
+from theory solvers in the form of theory lemmas. The proof 
+of unsatisfiability is a refutation proofs that has input clauses,
+learned clauses, and theory lemmas at its leaves, 
+and derives the empty clause at the root. The SAT solver is able 
+to build the refutation proofs for the input formula; however,
+these proofs are completed using proofs for the theory
+lemmas from the theory solver. 
+
+One way to produce these proofs would be to have the theory solver 
+produce proofs eagerly every time a theory lemma is generated. 
+However, in \cite{DBLP:conf/fmcad/KatzBTRH16}, they found that
+doing this lazily - that is, all proofs for theory lemmas are 
+generated only after the final refutation tree has been found. 
+Once the tree is generated, the solver asks the respective theory
+solver for the proofs for each theory lemma to complete the tree.
+
+This means that each theory lemma occurring in the proof gets 
+processed twice: once when they are generated for solving, and 
+again when they need to be proved for the tree. However, by 
+producing proofs lazily, in most cases the solvers save a lot 
+of computation since many lemmas produced during solving do not
+end up contributing to the final refutation.
+
+\cite{DBLP:conf/fmcad/KatzBTRH16} discusses lazy proof 
+production for three different theories - equality with
+uninterpreted functions (EUF), arrays with extensionality 
+(AX), and bitvectors (BV). For EUF, they propose a 
+completely lazy approach. For AX, they do lazy proof 
+productions with some book-keeping. Briefly, arrays are 
+representable as terms in the AX theory - $a[i]$ is 
+the result of reading the value at index $i$ in array $a$
+and $a[i] := b$ is the result of writing value $b$ to 
+array $a$ at index $i$. An axiom that the array solver 
+uses to produce proofs is the extensionality axiom:
+for any two arrays $a$ and $b$, i $a \neq b$ then 
+there exists a $k$ such that $a[k] \neq b[k]$.
+Since this axiom requires that the disequality of two 
+arrays is witnessed by an index ($k$), the value of
+$k$ needs to be stored so that when the proof is 
+being produced for this unsatisfiability lazily, the 
+solver can use this information to produce the proof.
+Finally, proof production for BV, elaborated in 
+~\cite{DBLP:conf/lpar/HadareanBRTD15}, is done 
+semi-lazily. Bit-vectors are arrays of binary bits, 
+so they are solved by a technique called $bit-blasting$
+where bitvector formulas are converted into an 
+equisatisfiable propositonal formula which is solved 
+by an internal SAT solver. Since redoing the 
+bit-blasting technique can be expensive, the SAT 
+solver eagerly records a trace of the bit-blasting 
+refutations. In contrast, the proof for the 
+bit-blasting process - converting a formula 
+to a propositional one, is done lazily for lemmas 
+that occur in the final proof. 
+
+The paper concludes by showing comparisons between 
+lazy and eager proofs for EUF and AX- 
+they extend CVC4 with lazy and eager proof production
+systems, and check the proofs for a set of 
+standard benchmarks. They produce proofs in a 
+format called LFSC (Logical Framework with Side Conditions)
+~\cite{DBLP:journals/fmsd/StumpORHT13} that has its own
+proof checker. The evaluations show that for most 
+of the benchmarks, CVC4 produces lazy proofs faster 
+than eager ones.
 
 \subsection{Z3}
+\label{sec:z3}
+Z3 is an SMT solver developed at Microsoft Research. 
+~\cite{DBLP:conf/lpar/MouraB08} elaborates on the proof 
+production system of Z3, highlighting their approach of 
+$implicit quotation$ and their natural deduction style 
+proofs for theory lemmas. Implicit quotation is an 
+implementation detail that saves the Z3 solver 
+computation when it comes to CNF conversion of input
+formulas of the SMT solvers. As explained in 
+\ref{sec:cnf}, a formula that needs to be checked 
+for satisfiability by an SMT solver is first converted 
+to conjunctive normal form or CNF. This is done by 
+recursively taking the subterms of the input formula, 
+and creating equivalences between the subterms and 
+fresh variables. Since an equivalence is logically 
+the same as a conjunction of inferences, this method 
+fits well into CNF conversion. For example, 
+$a \iff b$ is converted to CNF as follows. \\
+$Step\ 1:\ a\ \iff b$ \\
+$Step\ 2:\ (a \Rightarrow b) \land (b \Rightarrow a)$ \\
+$Step\ 3:\ (\neg a \lor b) \land (\neg b \lor a)$ \\
+Introducing these fresh variables increases the 
+number of literals in the formula. Z3 treats the 
+subterm itself as a literal. To distinguish the 
+literal representation from the sub-term, they quote
+it. If $a$ above is a fresh literal, and b is a 
+sub-term representing theh formula $x \land y$,
+instead of introducing the fresh literal $a$, 
+Z3 stores a quoted version of the formula - 
+$\lceil x \land y \rceil$. By doing this, they 
+avoid all the extra clauses that are added to the 
+formula to maintain this equivalence, as 
+shown in the example above. Instead, the name of the 
+literal gives enough information to tell us 
+what formula it is abstracting. They provide an 
+example of using implicit quotation for slack
+variables during linear integer arithmetic solving.
+
+This paper also explains the proof producing 
+calculus, which is similar to the calculus explained in
+sections \ref{sec:prelim} to \ref{sec:proofs}, 
+except that they choose a different representation. 
+
+They also emphasize their natural deduction style 
+proofs as opposed to resolution proofs that were already
+in use by SAT solvers at the time. These are mainly
+proofs by contradiction for theory lemmas, which 
+is also discussed in the other papers and discussed in 
+Section\textcolor{red}{LEMMA PROOFS}. Their main rules
+can be summarized as follows. A rule called 
+$unit_resolution$ handles a general form of resolution.
+The $hypothesis$ rule states a statement that needs to 
+be proved. This is done by the $lemma$ rule by 
+a proof by contradiction.
+
+An important characteristic of proofs in Z3 are that the
+proof producer axiomatizes many theory rewrites. These 
+can be considered holes in proofs that must be proven 
+by the proof checker. As argued by
+~\cite{DBLP:conf/fmcad/KatzBTRH16}, this gives the proof 
+checker work that is more nontrivial than just checking 
+proofs - they actually need to fill in parts of the proofs. 
+~\cite{DBLP:conf/lpar/MouraB08} argues that this is a 
+trade-off that saves the solver time in producing proofs 
+and that proof checkers are fairly well-equipped to 
+prove these axioms.
 
 \subsection{VeriT}
+\label{sec:verit}
+\cite{DBLP:conf/tacas/FontaineMMNT06} describes the proof
+production sytem of the haRVey SMT solver, which was 
+precursor to the solver VeriT. This paper is more 
+application-oriented than the other two. As mentioned in 
+Section \ref{sec:intro}, verification tools can be 
+evaluated using three different metrics - soundness or 
+trustability, automation, and expressiveness. There are 
+classes of tools that score highly on one or two of those 
+qualities, but not all. The metrics themselves are conflicting
+in practice. Higher automation is achieved by smart heuristics
+and algorithms coded into a system that is continuously 
+updated with optimizations. This results in an increasingly 
+large codebase that is difficult to keep bug-free as is 
+the case with SMT solvers. Soundness is achieved by 
+restricting the kernel to a small number of 
+axioms and inference rules and applying these 
+rules in a more interactive way when necessary. 
+Expressive logics such as higher order logic and 
+set theory allow the user to be more precise about 
+their specification. However, these logics are much
+harder to deal with in terms of solving. The 
+state-of-the-art consists of tools that are either high 
+on the expressiveness and the soundness scores, or
+on the automation score. 
+\cite{DBLP:conf/tacas/FontaineMMNT06} combines harVey, 
+a highly automated tool with Isabelle/HOL a $proof assistant$, 
+which is a tool that interactively allows a user 
+to prove theorems in higher-order logic. The user
+benefits from the expressive higher-order logic and 
+the high trustability of Isabelle/HOL while also 
+benefiting from the automation of the SMT solver.
+The trade-off of course is the work done to have 
+the SMT solver produce proofs of its work to the 
+proof assistant, before its results are trusted, which has 
+been the theme in all the papers that I chose to study.
+This is an improvement on previous work that use 
+the SMT solver as an oracle, without requiring it to 
+produce proofs.
 
+HaRVey provides $proof hints$ to Isabelle that 
+helps the proof assistant reconstruct the proofs 
+of the theorems proven by the SMT solver. Proof 
+assistants such as Isabelle offer users functions 
+known as $tactics$ that help the user in their 
+proof aspirations. HaRVey benefits from converting 
+its proofs into expressions in $sequent calculus$, 
+which is an alternate notation for formulas in 
+natural deduction. Modulo this encoding as sequents, 
+proof production is similar to the methods described 
+in this report. 
+
+They extended Isabelle with the $sat$ and $satx$ 
+that can be called in the proof assistant for 
+proving subgoals of the current goal being proven.
+ 
+This work also suggests optimization techniques 
+for SMT solving such as operating on $partial 
+models$ that are models of a formula where not all 
+literals in the formula are assigned a value. This has 
+the benefit that finding a partial model that is 
+unsatisfiable eliminates multiple full models that the 
+partial model can be extended to. For instance, if 
+a formula contains literals $a = b$ and 
+$f(a) \neq f(b)$ and a 1000 other literals, all models 
+in which $a = b$ and $f(a) \neq f(b)$ are unsatisfiable, 
+regardless of the values of the 1000 other literals.
+
+Finally, the paper presents a $congruence closure$ 
+algorithm to solve formulas in the theory of 
+equality over uninterpreted functions (EUF). In 
+this theory, we only know the function symbols 
+as they appear in terms, without knowing their 
+full behavior. The algorithm propagates the equalities
+from the formula using the rules of reflexivity, 
+transitivity, and symmetry along with the congruence rule
+that gives $f(a) = f(b)$ given that $a = b$. Once a 
+disequality is found between terms found to be equal, 
+the algorithm concludes that the formula is unsatisfiable.
+
+The implementation interface between Isabelle and haRVey 
+takes proofs for lemmas in the theory of EUF and 
+reconstructs them for the proof assistant. In summary,
+this is how the interface works. When the user is trying 
+to prove something in Isabelle, they may have the 
+subgoal of proving a formula $F$, that is to show that 
+$F$ is valid. This is the same as checking whether 
+$\neg F$ is unsatisfiable. So the user invokes the $sat$ 
+or $satx$ tactic from Isabelle which has haRVey check 
+$\neg F$ for unsatisfiability. If $\neg F$ is 
+satisfiable, the model provided by haRVey is given 
+to the user as a counterexample for $F$. 
+If it is unsatisfiable, then haRVey constructs a proof
+trace of the unsatisfiability along with proofs of 
+any theory lemmas used, encodes them as sequents,
+and sends it to the interface at Isabelle, 
+where the proof is reconstructed.
+
+\subsection{Differences and Similarities}
 Fine-grained vs coarse grained proofs. Eager vs lazy 
-proof production.
-
+proof production. Explaining DPLL(T).
+Rewriting. Proof production in theories - proof by contradiction.
 \section{Conclusion}
 \label{sec:conc}
 
