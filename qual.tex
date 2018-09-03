@@ -8,32 +8,8 @@
 \usepackage{mathtools}
 
 \begin{document}
-\begin{titlepage}
-	\centering
-	{\textbf{\Large University of Iowa \\ Computer Science Department}}
-	\vspace{1cm}
-	
-	{\Huge Comparison of Proof Producing Systems in SMT Solvers \par}
-	\vspace{1cm}
-	
-	{\large SUBMITTED IN PARTIAL FULFILLMENT OF THE REQUIREMENTS 
-		FOR THE QUALIFYING EXAM OF PH.D. PROGRAM \par}
-	\vspace{2cm}
-	
-	{\Large Arjun Viswanathan \par}
-	{\large University of Iowa - Computer Science Department \par}
-	{\large arjun-viswanthan@uiowa.edu}
-	\vspace{2cm}
-	
-	{\large Advisor \par}
-	{\Large Cesare Tinelli \par}
-	{\large cesare-tinelli@uiowa.edu \par}
-	
-	\vfill
-	{\large Fall 2018}
-\end{titlepage}
-
 \title{Comparison of Proof Producing Systems in SMT Solvers}
+\author{Arjun Viswanathan}
 \date{}
 \maketitle
 \begin{abstract}
@@ -173,9 +149,11 @@ For example, the following formula is over
 the theory of linear integer 
 arithmetic (LIA) and the theory of 
 equality over uninterpreted functions (EUF)
-~\cite{LIAEUF}.\\
+~\cite{LIAEUF}.
+\begin{center}
 $(x \land y) \Rightarrow (a = 0 \land a + b = c \land 
-\neg (f(b) = f(c)))$ \\
+\neg (f(b) = f(c)))$ 
+\end{center}
 $x$ and $y$ are terms in the 
 formula, and hence can only evaluate to $True$ or $False$.
 $a$, $b$, and $c$, on the other hand, are integer variables 
@@ -195,15 +173,13 @@ conjuncts. So we represent $c_1 \land ... \land c_n$ as
 $\{c_1, ..., c_n\}$.
 
 We need the notion of entailment on two levels. Propositional 
-entailment: \\
-$p \models_P q$ \\
-read as ``formula $p$ propositionally entails formula $q$" says 
+entailment $p \models_P q$ read as 
+``formula $p$ propositionally entails formula $q$" says 
 that $q$ is a logical consequence of $p$. For example, 
 $a \land b \models_P a$, where a and b are Boolean 
-variables. Entailment also occurs in a theory: \\
-$x \models_i y$ \\
-read as ``formula $x$ $i$-entails formula $y$", where 
-$i$ is the concerned theory. For example, 
+variables. Entailment also occurs in a theory
+$x \models_i y$ read as ``formula $x$ $i$-entails formula $y$", 
+where $i$ is the concerned theory. For example, 
 $x > 3 \models_{LIA} x > 0$, where x is an integer variable.
 If we abstracted these formulas to the propositional level, 
 $m = (x > 3)$, and $n = (x > 0)$, 
@@ -233,9 +209,8 @@ but not the second one.
 
 A formula is $valid$, if no matter what values we assign its 
 variables, it evaluates to $True$. In other words, it is
-entailed from nothing. For example, \\
-$\models_P p \lor \neg p$, and \\
-$\models_{LIA} (x = 0) \lor (x < 0) \lor (x > 0)$.
+entailed from nothing. For example, $\models_P p \lor \neg p$, 
+and $\models_{LIA} (x = 0) \lor (x < 0) \lor (x > 0)$.
 
 Finally, the universal quantifier ($\forall$) and 
 the existential quantifier ($\exists$) help us quantify 
@@ -258,20 +233,19 @@ discussed in this work are DPLL(T) solvers, that is an
 extension of DPLL to accommodate theories. 
 Section~\ref{sec:cnf}
 introduces the normal form required by these solvers, 
-and Section~\ref{sec:trans} explains the DPLL(T) algorithm as a 
+and Section~\ref{sec:abst} explains the DPLL(T) algorithm as a 
 transition system as presented 
-in~\cite{DBLP:conf/fmcad/KatzBTRH16}.
+in~\cite{DBLP:conf/fmcad/KatzBTRH16} and originally 
+in~\cite{DBLP:journals/jacm/NieuwenhuisOT06}.
 
 \subsection{CNF Conversion}
 \label{sec:cnf}
-\begin{framed}
 SMT solvers require that the input formula is converted to a 
 normal form called conjunctive normal form (CNF), before they 
 start solving them. The CNF of a formula represents the 
 formula as a conjunction of disjunctions. A clause is a 
 disjunction (Boolean OR) of variables. So CNF is a 
 conjunction (Boolean AND) of clauses. 
-\end{framed}
 
 Using Tseitin clausification~\cite{BEL01Handbook}, any formula 
 can be converted into an equisatisfiable CNF formula.
@@ -284,18 +258,17 @@ are applied to F to convert it into CNF.
 		\land (x_1 \iff (b \land c)) \\
 	&Step\ 2&\ &x_2 \land (x_2 \iff a \Rightarrow x_1) 
 		\land (x_1 \iff (b \land c)) \\
-	&Step\ 3&\ &x_2 \land \\
-	& & &(x_2 \Rightarrow (a \Rightarrow x_1) \land 
-		(a \Rightarrow x_1) \Rightarrow x_2) \land \\
+	&Step\ 3&\ &x_2\ \land\  
+		(x_2 \Rightarrow (a \Rightarrow x_1)\ \land\  
+		(a \Rightarrow x_1) \Rightarrow x_2)\ \land\  \\
 	& & &(x_1 \Rightarrow (b \land c) \land 
 		(b \land c) \Rightarrow x_1) \\
-	&Step\ 4&\ &x_2 \land \\
-	& & &(\neg x_2 \lor \neg a \lor x_1) \land 
-		(a \lor x_2) \land (\neg x_1 \lor x_2) \land \\
+	&Step\ 4&\ &x_2\ \land\ 
+		(\neg x_2 \lor \neg a \lor x_1)\ \land\  
+		(a \lor x_2) \land (\neg x_1 \lor x_2)\ \land\ \\
 	& & &(\neg x_1 \lor b) \land (\neg x_1 \lor c) \land 
 		(\neg b \lor \neg c \lor x_1) \\
 \end{align*}
-
 Steps 1 and 2 involve introducing fresh variables $x_1$
 and $x_2$ for all subterms of F by means of equivalence 
 between the subterm and the fresh variable. Steps 3 and 4 
@@ -309,39 +282,51 @@ that keep the normal form's size in check.
 
 \subsection{Abstract DPLL(T) Framework}
 \label{sec:abst}
-\begin{framed}
-	At a high level, DPLL(T) takes a formula in CNF, and tries 
-	to satisfy every conjunct. There are two levels of reasoning 
-	- propositional and theory. The algorithm can be understood as 
-	always working in the propositional level (thoery literals
-	are abstracted to propositional ones), trying to 
-	satisfy the formula. If the formula is propositionally 
-	unsatisfiable, then the algorithm concludes, without any 
-	theory reasoning that the formula is unsatisfiable. However, 
-	if the formula is propositionally satisfiable by a model, 
-	then the SAT solver sends the satisfying model to the 
-	theory solver(s) concerned to check whether it is satisfiable
-	at the thoery level as well. If it is satisfiable in the 
-	theory level, then the solver returns to the user that 
-	the formula is satisfiable. If the theory solver finds an 
-	inconsistency, it sends back information to the 
-	propositional solver, restricting the current model, 
-	and the solver tries again. If the propositional solver 
-	is unable to please all the theory solvers 
-	for any model that it finds at the propositional level, then
-	we conclude by exhaustion that the formula is unsatisfiable.
-\end{framed}
+At a high level, DPLL(T) takes a formula in CNF, and tries 
+to satisfy every conjunct. There are two levels of reasoning 
+- propositional and theory. The algorithm can be understood as 
+always working in the propositional level (thoery literals
+are abstracted to propositional ones), trying to 
+satisfy the formula. If the formula is propositionally 
+unsatisfiable, then the algorithm concludes, without any 
+theory reasoning, that the formula is unsatisfiable. However, 
+if the formula is propositionally satisfiable by a model, 
+then the SAT solver sends the satisfying model to the 
+theory solver(s) concerned to check whether it is satisfiable
+at the thoery level as well. If it is satisfiable in the 
+theory level, then the solver returns to the user that 
+the formula is satisfiable. If the theory solver finds an 
+inconsistency, it sends back information to the 
+propositional solver, restricting the current model, 
+and the solver tries again. If the propositional solver 
+is unable to please all the theory solvers 
+for any model that it finds at the propositional level, then
+we conclude by exhaustion that the formula is unsatisfiable.
+
+Checking whether the formula is 
+unsatisfiable at the propositional level is nontrivial.
+It involves incrementally assigning literals by 
+propagation, and when that isn't an option, by guessing.
+When a guess takes us down a path that results in 
+unsatisfiability, we must backtrack and check the 
+whether the formula is indeed unsatisfiable if we 
+flip the guess.
+
+Section~\ref{sec:trans} explains the preliminaries for 
+the system, Sections~\ref{sec:proprules} 
+and~\ref{sec:propex} discuss solving at the SAT 
+level, and Sections~\ref{sec:theoryrules} 
+and~\ref{sec:theoryex} discuss solving at the 
+theory level.
+
 
 \subsubsection{Transition System}
-	\label{sec:trans}
+\label{sec:trans}
 DPLL(T) solvers can be formalized abstractly as 
-state transition systems defined by a set of transition rules.\\
-The states of a system are either
-\begin{itemize}
-	\item $fail$
-	\item $\langle M, F, C \rangle$
-\end{itemize}
-$M$ is the current context, that is it is the current 
+state transition systems defined by a set of transition 
+rules. The states of a system are either $fail$ or 
+$\langle M, F, C \rangle$ where
+$M$ is the current context, that is, it is the current 
 assignment of literals in the formula; a literal in M is 
 preceded by a $\bullet$ if the literal was a decision, 
 that is, it was guessed. 
@@ -360,33 +345,48 @@ Final state:
 	T, $F$ is equisatisfiable with $F_0$ in T, and $M \models_P F$.
 \end{itemize}
 
-%Each atom of a clause $F \cup C$ is pure, that is, it has a signature
-%$\Sigma_i$ for some $i \in {1,...,m}$.
-$Int_M$ is the set of all \textit{interface literals} of M:
-the (dis)equalities between shared constants. \\
-\textit{Shared constants} are the set represented by \\
-$\{c\ |\ constant\ c\ occurs\ in\ Lit_{M|i}\ and\ Lit_{M|j},\ 
-for\ some\ 1 \leq i < j \leq m\}$. \\
-$Lit_{M|i}$ consists of the $\Sigma_i$- literals of $Lit_M$. \\
-These technicalities are necessary for solving of clauses 
-that are a combination of multiple theories. 
-For example, the term \\
-$f(a) = 1 + x$ \\
-combines the theory of equality over uninterpreted functions,
-and that of arithmetic. Since each theory has its own solver,
-this term that uses functions from both theories, must be 
-purified for each theory solver, and this is done by means of
-a shared constant. If the term is replaced by the following 
-terms, \\
-$f(a) = s_1, s_1 = 1 + x$ \\
-we now have one term that is entirely over uninterpreted 
-functions, and one over arithmetic ones. \\
+The transition system goes from the initial state from 
+one of the final states by application of the rules in
+Sections~\ref{sec:proprules} and~\ref{sec:theoryrules} 
+nondeterministically. In practice and for proof production, 
+they are applied with a particular strategy but for 
+completeness, a nondeterministic order works. A rule 
+is applicable when all its premises hold, and it 
+is applied to make the conclusion true. 
 
-The rules of the transition systems can be split into a 
-set of propositional rules, and a set of theory rules. 
+The following technicalities are necessary 
+for solving of clauses that are a 
+combination of multiple theories. They are only 
+mentioned here for completeness. For a higher
+level understanding, consider the term 
+$(f(a) = 1 + x)$ that
+combines the theory of equality over 
+uninterpreted functions (EUF), and that of arithmetic. 
+Since each theory has its own solver,
+this term that uses functions from both theories, 
+must be purified for each theory solver, 
+and this is done by means of
+a shared constant. If the term is replaced by 
+the terms $f(a) = s_1$ and $s_1 = 1 + x$,
+we now have one term that is entirely over 
+EUF, and one over arithmetic ones.
+
+$Int_M$ is the set of all 
+\textit{interface literals} of M: the 
+(dis)equalities between shared constants. 
+\textit{Shared constants} are the set 
+represented by \\
+$\{c\ |\ constant\ c\ occurs\ in\ Lit_{M|i}\ and\ Lit_{M|j},\ 
+for\ some\ 1 \leq i < j \leq m\}$. 
+$Lit_{M|i}$ consists of the $\Sigma_i$- literals of $Lit_M$.
+
+The paper gives a guarantee of $refutation\ soundness$:
+if an execution starting with 
+$\langle \phi, F_i, \phi \rangle$ ends with $fail$, 
+then $F_0$ is unsatisfiable in $T$.
 
 \subsubsection{Propositional Rules}
-	\label{sec:proprules}
+\label{sec:proprules}
 	
 \begin{figure}[t]
 	\centering
@@ -429,14 +429,14 @@ We might not always have this luxury; sometimes, we may have
 to make a guess on an assignment, and decisions (Dec) let us do 
 this. If we are trying to satisfy 
 $(\neg a \lor c) \land (\neg b \lor d) \land (a \lor b)$,
-each conjunct is a 
+each conjunct is a non-unit
 formula, so we need to guess the value of one of the literals. 
 Propogations and/or decisions could lead us to 
 a point where our current assignment conflicts with 
 our goal of trying to satisfy the input formula. The 
 conflict rule (Confl) recognizes this. In the previous 
 example, assume we came up with the assignment 
-$\{a = False,\ b = False\}$ by decisions. This assignment 
+$\{a = False,\ b = False\}$ by guessing. This assignment 
 satisfies the first two clauses, but falsifies the third, 
 so the third clause 
 $a \lor b$ is recognized as a conflict clause.
@@ -448,10 +448,12 @@ rule ensures this. If, there are previous decisions at
 the time of conflict, then the explain rule (Expl) 
 and the backjump rule (Backj) work together to rewind 
 the state to a point where the decision is flipped. 
-Decisions cause propagations, and once we suspect that 
-a decision was a wrong decision, we want to undo the 
+Decisions may cause propagations, and once we suspect that 
+a decision was wrongly made, we want to undo the 
 propagations that were caused by it. This is intuitively 
-what the explain rule does. Once this is done, the backjump rule is able to flip the decision. A conflict clause always 
+what the explain rule (Expl) does. Once this is done, 
+the backjump rule (Backj) is able to flip the decision. 
+A conflict clause always 
 consists of a formula that is entailed by the input formula. 
 Explanations could transform the conflict 
 clause into a clause that we didn't have to begin with, 
@@ -462,7 +464,7 @@ satisfied.
 
 
 \subsubsection{DPLL Example}
-	\label{sec:propex}
+\label{sec:propex}
 \begin{figure}[t]
 	\begin{center}
 		\begin{tabular}{l l l l l}
@@ -522,7 +524,7 @@ while deriving the most basic conflict, the empty clause.
 
 
 \subsubsection{Theory Rules}
-		\label{sec:theoryrules}
+\label{sec:theoryrules}
 
 \begin{figure}[t]
 	\centering
@@ -581,7 +583,7 @@ provided by that theory.
 
 
 \subsubsection{DPLL(T) Example}
-\label{sec:thoeryex}
+\label{sec:theoryex}
 
 \begin{figure}[t]
 	\begin{center}
@@ -610,17 +612,20 @@ provided by that theory.
 \end{figure}
 
 Consider the following example that consists of terms 
-in the theory of equality over uninterpreted 
-functions (EUF). Since this is the only theory we consider 
+in the theory of EUF. Since this is the only theory we consider 
 $T$ the to be the combination of $T_1 = EUF$.
 The input formula for the solver 
-in CNF is: \\
-$(a = b) \land (f(a) = f(b) \lor f(g(a)) = h(b)) \land
-(f(a) = c) \land (c \neq d) \land (f(b) = d)$ \\
-Abstracting the terms, we get: \\
-$1 \land (2 \lor 3) \land 4 \land \neg 5 \land 6$ \\
+in CNF is: 
+\begin{center}
+$(a = b) \land (f(a) = f(b) \lor f(g(a) = h(b)) \land
+(f(a) = c) \land (c \neq d) \land (f(b) = d)$ 
+\end{center}
+Abstracting the terms and using the set notation, we have:
+\begin{center}
+$\{1, 2 \lor 3, 4, \neg 5, 6\}$
+\end{center}
 DPLL(T)'s execution on the example is shown in 
-Figure\ref{fig:theoryex}. The interesting steps here 
+Figure~\ref{fig:theoryex}. The interesting steps here 
 are steps 2 to 4 that use theory lemmas. The clauses 
 $\neg 1 \lor 2$ and $\neg 2 \lor 5$ are theory lemmas.
 Intuitively, they are saying "if 1 is true, then 2 is 
@@ -651,7 +656,9 @@ An important rule is that of resolution, which is introduced
 in Section~\ref{sec:res}. Proofs of unsatisfiability are then 
 explained, at the propositional level in 
 Section~\ref{sec:propproofs}, and at the theory level in 
-Section~\ref{sec:theoryproofs}.
+Section~\ref{sec:theoryproofs}. Finally, 
+Section~\ref{sec:theorysolverproofs} explains how
+theory solver produce proofs of theory lemmas.
 
 \subsection{Propositional Resolution}
 \label{sec:res}
@@ -659,22 +666,30 @@ Logical calculi operate by means of rules of inferences. A
 rule of inference consists of a number of premises and a 
 conclusion. The rule of inference specifies a schema for a 
 logical calculus where, if the premises are true, then 
-the conclusions are true. For example, \\
-$\infer[modus\ ponens]{\psi}{\phi \Rightarrow \psi & \phi}$ \\
+the conclusions are true. For example,
+\begin{center}
+	$\infer[modus\ ponens]{\psi}{\phi \Rightarrow \psi & \phi}$
+\end{center}
 Modus ponens is a rule in classical logic that says that 
 "if A implies B is true $and$ if A is true, then B is true".
 
-The inference rule that is heavily used in construction of 
+The inference rule that is central to the construction of 
 proofs for SMT solvers is propositional resolution. It is
-stated as follows. \\
-$\infer[resolution]{\phi_1 \lor ... \lor \phi_n \lor \psi_1 \lor ... \lor \psi_m}
-{\phi_1 \lor ... \lor \phi_n \lor \chi & \neg \chi \lor \psi_1 \lor ... \lor \psi_m}$ \\
+stated as follows.
+\begin{center}
+$\infer[resolution]{\phi_1 \lor ... \lor \phi_n \lor 
+	\psi_1 \lor ... \lor \psi_m}
+{\phi_1 \lor ... \lor \phi_n \lor \chi & \neg \chi 
+	\lor \psi_1 \lor ... \lor \psi_m}$ 
+\end{center}
 
 Assuming the usual interpretations of the conjunction
 ($\land$) and disjunction ($\lor$) in classical logic, the 
 intuition behind the resolution rule is explained using the 
-following instance of the resolution rule. \\
-$\infer{a \lor c}{a \lor \neg b & b \lor c}$ \\
+following instance of the resolution rule.
+\begin{center}
+$\infer{a \lor c}{a \lor \neg b & b \lor c}$
+\end{center}
 If the first premise is true, and $b$ is true - that is, 
 $\neg b$ is false, then $a$ must be true. If the second 
 premise is true, and $b$ is false, then $c$ must be true.
@@ -697,44 +712,7 @@ derive the empty clause $\bot$ from this set of clauses.
 \subsection{Proofs at the Propositional Level}
 \label{sec:propproofs}
 
-\begin{figure}[t]
-	\begin{center}
-		\begin{tabular}{l l l l l}
-			\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} & \textbf{Step}\\
-			\hline
-			& $a \lor \neg b, \neg a \lor \neg b, b \lor c, \neg c \lor b$ 
-			& $\phi$ & Dec & 1 \\
-			$\bullet a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-			\neg c \lor b$ & $\phi$ & Prop ($a \lor \neg b$) & 2 \\
-			$\bullet a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, 
-			b \lor c, \neg c \lor b$ & $\phi$ & Prop $(b \lor c)$ & 3 \\
-			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
-			b \lor c, \neg c \lor b$ & $\phi$ & Confl $(\neg c \lor b)$ & 4 \\
-			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-			\neg c \lor b$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 5 \\
-			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
-			b \lor c, \neg c \lor b$ & $b$ & Expl $(\neg a \lor \neg b)$ & 6 \\
-			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
-			b \lor c, \neg c \lor b$ & $\neg a$ & Learn $(\neg a)$ & 7\\
-			$\bullet a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, 
-			b \lor c, \neg c \lor b, \neg a$ & $\neg a$ & Backj $(\neg a)$ & 8 \\
-			$\neg a$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-			\neg c \lor b, \neg a$ & $\phi$ & Prop $(a \lor \neg b)$ & 9 \\
-			$\neg a \neg b$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-			\neg c \lor b, \neg a$ & $\phi$ & Prop $(b \lor c)$ & 10 \\
-			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-			\neg c \lor b, \neg a$ & $\phi$ & Confl $(\neg c \lor b)$ & 11 \\
-			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-			\neg c \lor b, \neg a$ & $\neg c \lor b$ & Expl $(b \lor c)$ & 12 \\
-			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-			\neg c \lor b, \neg a$ & $b$ & Expl $(a \lor \neg b)$ & 13\\
-			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-			\neg c \lor b, \neg a$ & $a$ & Expl $(\neg a)$ & 14 \\
-			$\neg a \neg b\ c$ & $a \lor \neg b, \neg a \lor \neg b, b \lor c, 
-			\neg c \lor b, \neg a$ & $\bot$ & Fail & 15 \\
-		\end{tabular}
-	\end{center}
-	
+\begin{figure}[t]	
 	\begin{prooftree}
 		\AxiomC{$\neg c \lor b$ (4)}
 		\AxiomC{$b \lor c$ (5)}
@@ -771,8 +749,8 @@ built by observing the conflict clauses and the explanations
 applied.  
 
 Figure~\ref{fig:propproof} shows the proof tree for the 
-unsatisfiability of F from the example in Figure~\ref{fig:propex}, 
-reproduced for convenience. The nodes of the tree contain 
+unsatisfiability of F from the example in Figure~\ref{fig:propex}. 
+The nodes of the tree contain 
 the clause being used followed by the step number from 
 algorithm in parentheses. The left subtree is a proof of
 $\neg a$. The right subtree is the proof of $a$ which is 
@@ -785,43 +763,21 @@ it is derived in Step 7). Steps 8 to 14 constitute
 the left subtree of the proof tree.
 Conflict clauses and explanations represent propositional resolution
 between clauses and the proof tree has a leaf for every application 
-of the Conflict and the Explain rules, and the node at the root 
-represents the Fail rule. The $\neg a$ node at the root of the 
-left subtree
-is an exception to this (it represents an explanation, but isn't a leaf
-in the tree), but notice that it is a learned clause; 
-so the tree could be considered as a split of the current tree 
+of the Conflict and the Explain rules 
+- except the $\neg a$ node since it is learned - and 
+the node at the root 
+represents the Fail rule. For the learned clause,   
+the tree could be considered as a split of the current tree 
 at the $\neg a$ node. The left subtree of the new tree 
 would then just consist of $\neg a$ as a leaf, and the proof 
 for $\neg a$ would be a satellite proof tree representing 
 the left sub-tree of the current tree. That is how it is depicted 
 in ~\cite{DBLP:conf/fmcad/KatzBTRH16}.
 
+
 \subsection{Proofs at the Theory Level}
 \label{sec:theoryproofs}
-\begin{figure}[t]
-\begin{center}
-	\begin{tabular}{l l l l l}
-		\textbf{M} & \textbf{F} & \textbf{C} & \textbf{Rule} 
-		& \textbf{Step}\\
-		\hline
-		& $1, 2 \lor 3, 4, \neg 5, 6$ & $\phi$ & 
-		$Prop^+$ & 1 \\
-		$1\ 4\neg5\ 6$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
-		$\phi$ & $Prop_{1}(\neg 1 \lor 2)$ & 2 \\ 
-		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
-		$\phi$ & $Confl_{1}(\neg 2 \lor 5)$ & 3 \\
-		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
-		$\neg 2 \lor 5$ & $Expl_{1}(\neg 1 \lor 2)$ & 4 \\	
-		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
-		$\neg 1 \lor 5$ & $Expl(1)$ & 5 \\
-		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
-		$5$ & $Expl(\neg 5)$ & 6 \\
-		$1\ 4\neg5\ 6\ 2$ & $1, 2 \lor 3, 4, \neg 5, 6$ & 
-		$\bot$ & $Fail$ & 7 \\
-	\end{tabular}
-\end{center}
-	
+\begin{figure}[t]	
 	\begin{prooftree}
 		\AxiomC{$\neg 5$ (6)}
 		\AxiomC{$EUF\ Proof$}
@@ -838,12 +794,12 @@ in ~\cite{DBLP:conf/fmcad/KatzBTRH16}.
 \end{figure}
 
 At the propositional level, we saw proof trees as being 
-refutation trees that derived $\bot$ at the rooting using
+refutation trees that derived $\bot$ at the root using
 input clauses and learned clauses at the leaves, with 
 learned clauses supported by satellite resolution proofs. 
 At the theory level, we have clauses called $theory\ lemmas$
 that the theory solvers present to us to help us 
-apply constraints at the theory level. Since the theory solvers 
+apply constraints from the theory level. Since the theory solvers 
 come up with the lemmas, the proof is also expected to be 
 at the theory level. And thus the theory solver also 
 provides us with the proof for the lemma. In our refutation tree,
@@ -851,7 +807,7 @@ when we arrive at a leaf with a theory clause, we ask the
 theory solver for its proof and plug it into the tree.
 
 Figure~\ref{fig:thoeryproof} shows the proof tree for 
-Figure~\ref{fig:theoryex}, reproduced in the figure. The part here
+the example from Figure~\ref{fig:theoryex}. The part here
 that is different from the propositional case here is the theory 
 lemmas in steps 3 and 4. Notice these aren't leaves in the proof 
 tree. A proof from the theory solver is plugged in to support 
@@ -876,7 +832,7 @@ complete. The main rule we are concerned with is
 the $proof\ by\ contradiction$ rule, which works as 
 follows. If you assume $\psi$ and derive $False$, 
 then $\neg \psi$ is true. Theory solvers use 
-theory specific rules along with primarily the 
+theory specific rules along with the 
 proof by contradiction rule, to prove their lemmas.
 
 Consider the following example 
@@ -884,6 +840,7 @@ from~\cite{DBLP:conf/fmcad/KatzBTRH16}.
 The EUF proof for the lemma 
 $L = (x \neq y) \lor (z \neq f(y)) \lor (f(x) = z)$ is 
 as follows. \\
+
 1. Convert the lemma into its negation: \\
 $\neg L : \neg ((x \neq y) \lor (z \neq f(y)) \lor (f(x) = z))$ \\
 which is equivalent to \\
@@ -923,8 +880,8 @@ metrics.
 \subsection{CVC4}
 \label{sec:cvc4}
 The proof production system of the CVC4 SMT solver is described 
-in \cite{DBLP:conf/fmcad/KatzBTRH16}. The paper introduces the 
-concept of lazy proof production for SMT solvers. In DPLL(T) 
+in~\cite{DBLP:conf/fmcad/KatzBTRH16}. The paper introduces the 
+concept of lazy proof production for SMT solvers. In DPLL(T), 
 the SAT solver reasons about the input formula using feedback 
 from theory solvers in the form of theory lemmas. The proof 
 of unsatisfiability is a refutation proofs that has input clauses,
@@ -936,8 +893,9 @@ lemmas from the theory solver.
 
 One way to produce these proofs would be to have the theory solver 
 produce proofs eagerly every time a theory lemma is generated. 
-However, in \cite{DBLP:conf/fmcad/KatzBTRH16}, they found that
-doing this lazily - that is, all proofs for theory lemmas are 
+However, in~\cite{DBLP:conf/fmcad/KatzBTRH16}, the authors found that
+doing this $lazily$ is efficient - that is, 
+all proofs for theory lemmas are 
 generated only after the final refutation tree has been found. 
 Once the tree is generated, the solver asks the respective theory
 solver for the proofs for each theory lemma to complete the tree.
@@ -950,7 +908,7 @@ of computation since many lemmas produced during solving do not
 end up contributing to the final refutation.
 
 \cite{DBLP:conf/fmcad/KatzBTRH16} discusses lazy proof 
-production for three different theories - equality with
+production for three different theories - equality over
 uninterpreted functions (EUF), arrays with extensionality 
 (AX), and bitvectors (BV). For EUF, they propose a 
 completely lazy approach. For AX, they do lazy proof 
@@ -960,15 +918,15 @@ the result of reading the value at index $i$ in array $a$
 and $a[i] := b$ is the result of writing value $b$ to 
 array $a$ at index $i$. An axiom that the array solver 
 uses to produce proofs is the extensionality axiom:
-for any two arrays $a$ and $b$, i $a \neq b$ then 
+for any two arrays $a$ and $b$, if $a \neq b$ then 
 there exists a $k$ such that $a[k] \neq b[k]$.
 Since this axiom requires that the disequality of two 
 arrays is witnessed by an index ($k$), the value of
 $k$ needs to be stored so that when the proof is 
 being produced for this unsatisfiability lazily, the 
 solver can use this information to produce the proof.
-Finally, proof production for BV, elaborated in 
-~\cite{DBLP:conf/lpar/HadareanBRTD15}, is done 
+Finally, proof production for BV, elaborated 
+in~\cite{DBLP:conf/lpar/HadareanBRTD15}, is done 
 semi-lazily. Bit-vectors are arrays of binary bits, 
 so they are solved by a technique called $bit-blasting$
 where bitvector formulas are converted into an 
@@ -985,35 +943,37 @@ The paper concludes by showing comparisons between
 lazy and eager proofs for EUF and AX- 
 they extend CVC4 with lazy and eager proof production
 systems, and check the proofs for a set of 
-standard benchmarks. They produce proofs in a 
-format called LFSC (Logical Framework with Side Conditions)
-~\cite{DBLP:journals/fmsd/StumpORHT13} that has its own
-proof checker. The evaluations show that for most 
+standard benchmarks. The evaluations show that for most 
 of the benchmarks, CVC4 produces lazy proofs faster 
 than eager ones.
 
 \subsection{Z3}
 \label{sec:z3}
-Z3 is an SMT solver developed at Microsoft Research. 
-~\cite{DBLP:conf/lpar/MouraB08} elaborates on the proof 
+Z3 is an SMT solver developed at Microsoft 
+Research.~\cite{DBLP:conf/lpar/MouraB08} elaborates on the proof 
 production system of Z3, highlighting their approach of 
-$implicit quotation$ and their natural deduction style 
-proofs for theory lemmas. Implicit quotation is an 
+$implicit\ quotation$ and their natural deduction style 
+proofs for theory lemmas, also explained in 
+Section~\ref{sec:theorysolverproofs}. Implicit quotation is an 
 implementation detail that saves the Z3 solver 
 computation when it comes to CNF conversion of input
 formulas of the SMT solvers. As explained in 
 \ref{sec:cnf}, a formula that needs to be checked 
 for satisfiability by an SMT solver is first converted 
-to conjunctive normal form or CNF. This is done by 
+to or CNF. This is done by 
 recursively taking the subterms of the input formula, 
 and creating equivalences between the subterms and 
 fresh variables. Since an equivalence is logically 
 the same as a conjunction of inferences, this method 
 fits well into CNF conversion. For example, 
-$a \iff b$ is converted to CNF as follows. \\
-$Step\ 1:\ a\ \iff b$ \\
-$Step\ 2:\ (a \Rightarrow b) \land (b \Rightarrow a)$ \\
-$Step\ 3:\ (\neg a \lor b) \land (\neg b \lor a)$ \\
+$a \iff b$ is converted to CNF as follows.
+
+\begin{align*}
+&Step\ 1:&\ &a\ \iff b \\
+&Step\ 2:&\ &(a \Rightarrow b) \land (b \Rightarrow a) \\
+&Step\ 3:&\ &(\neg a \lor b) \land (\neg b \lor a) 
+\end{align*}
+
 Introducing these fresh variables increases the 
 number of literals in the formula. Z3 treats the 
 subterm itself as a literal. To distinguish the 
@@ -1031,18 +991,11 @@ what formula it is abstracting. They provide an
 example of using implicit quotation for slack
 variables during linear integer arithmetic solving.
 
-This paper also explains the proof producing 
+This paper also briefly explains the proof producing 
 calculus, which is similar to the calculus explained in
-sections \ref{sec:prelim} to \ref{sec:proofs}, 
+sections~\ref{sec:prelim} to~\ref{sec:proofs}, 
 except that they choose a different representation. 
-
-They also emphasize their natural deduction style 
-proofs as opposed to resolution proofs that were already
-in use by SAT solvers at the time. These are mainly
-proofs by contradiction for theory lemmas, which 
-is also discussed in the other papers and discussed in 
-Section\textcolor{red}{LEMMA PROOFS}. Their main rules
-can be summarized as follows. A rule called 
+Their main rules can be summarized as follows. A rule called 
 $unit_resolution$ handles a general form of resolution.
 The $hypothesis$ rule states a statement that needs to 
 be proved. This is done by the $lemma$ rule by 
@@ -1051,43 +1004,29 @@ a proof by contradiction.
 An important characteristic of proofs in Z3 are that the
 proof producer axiomatizes many theory rewrites. These 
 can be considered holes in proofs that must be proven 
-by the proof checker. As argued by
-~\cite{DBLP:conf/fmcad/KatzBTRH16}, this gives the proof 
+by the proof checker. As argued 
+in~\cite{DBLP:conf/fmcad/KatzBTRH16}, this gives the proof 
 checker work that is more nontrivial than just checking 
 proofs - they actually need to fill in parts of the proofs. 
-~\cite{DBLP:conf/lpar/MouraB08} argues that this is a 
+\cite{DBLP:conf/lpar/MouraB08} argues that this is a 
 trade-off that saves the solver time in producing proofs 
 and that proof checkers are fairly well-equipped to 
 prove these axioms.
 
+
 \subsection{VeriT}
 \label{sec:verit}
 \cite{DBLP:conf/tacas/FontaineMMNT06} describes the proof
-production sytem of the haRVey SMT solver, which was 
+production sytem of the haRVey SMT solver, which was a
 precursor to the solver VeriT. This paper is more 
 application-oriented than the other two. As mentioned in 
 Section \ref{sec:intro}, verification tools can be 
 evaluated using three different metrics - soundness or 
 trustability, automation, and expressiveness. There are 
 classes of tools that score highly on one or two of those 
-qualities, but not all. The metrics themselves are conflicting
-in practice. Higher automation is achieved by smart heuristics
-and algorithms coded into a system that is continuously 
-updated with optimizations. This results in an increasingly 
-large codebase that is difficult to keep bug-free as is 
-the case with SMT solvers. Soundness is achieved by 
-restricting the kernel to a small number of 
-axioms and inference rules and applying these 
-rules in a more interactive way when necessary. 
-Expressive logics such as higher order logic and 
-set theory allow the user to be more precise about 
-their specification. However, these logics are much
-harder to deal with in terms of solving. The 
-state-of-the-art consists of tools that are either high 
-on the expressiveness and the soundness scores, or
-on the automation score. 
+qualities, but not all. 
 \cite{DBLP:conf/tacas/FontaineMMNT06} combines harVey, 
-a highly automated tool with Isabelle/HOL a $proof assistant$, 
+a highly automated tool with Isabelle/HOL a $proof\ assistant$, 
 which is a tool that interactively allows a user 
 to prove theorems in higher-order logic. The user
 benefits from the expressive higher-order logic and 
@@ -1097,39 +1036,40 @@ The trade-off of course is the work done to have
 the SMT solver produce proofs of its work to the 
 proof assistant, before its results are trusted, which has 
 been the theme in all the papers that I chose to study.
-This is an improvement on previous work that use 
+This work is an improvement on previous work that use 
 the SMT solver as an oracle, without requiring it to 
 produce proofs.
 
-HaRVey provides $proof hints$ to Isabelle that 
+HaRVey provides $proof\ hints$ to Isabelle that 
 helps the proof assistant reconstruct the proofs 
 of the theorems proven by the SMT solver. Proof 
 assistants such as Isabelle offer users functions 
 known as $tactics$ that help the user in their 
 proof aspirations. HaRVey benefits from converting 
-its proofs into expressions in $sequent calculus$, 
+its proofs into expressions in $sequent\ calculus$, 
 which is an alternate notation for formulas in 
-natural deduction. Modulo this encoding as sequents, 
+natural deduction, since Isabelle is well-equipped to
+deal with sequents. Modulo this encoding as sequents, 
 proof production is similar to the methods described 
 in this report. 
 
-They extended Isabelle with the $sat$ and $satx$ 
+They extended Isabelle with the $sat$ and $satx$ tactic
 that can be called in the proof assistant for 
 proving subgoals of the current goal being proven.
  
 This work also suggests optimization techniques 
-for SMT solving such as operating on $partial 
+for SMT solving such as operating on $partial\  
 models$ that are models of a formula where not all 
 literals in the formula are assigned a value. This has 
 the benefit that finding a partial model that is 
 unsatisfiable eliminates multiple full models that the 
 partial model can be extended to. For instance, if 
 a formula contains literals $a = b$ and 
-$f(a) \neq f(b)$ and a 1000 other literals, all models 
+$f(a) \neq f(b)$ and 1000 other literals, all models 
 in which $a = b$ and $f(a) \neq f(b)$ are unsatisfiable, 
 regardless of the values of the 1000 other literals.
 
-Finally, the paper presents a $congruence closure$ 
+Finally, the paper presents a $congruence\ closure$ 
 algorithm to solve formulas in the theory of 
 equality over uninterpreted functions (EUF). In 
 this theory, we only know the function symbols 
@@ -1140,10 +1080,12 @@ transitivity, and symmetry along with the congruence rule
 that gives $f(a) = f(b)$ given that $a = b$. Once a 
 disequality is found between terms found to be equal, 
 the algorithm concludes that the formula is unsatisfiable.
+Section~\ref{sec:theorysolverproofs} shows a small 
+example.
 
 The implementation interface between Isabelle and haRVey 
 takes proofs for lemmas in the theory of EUF and 
-reconstructs them for the proof assistant. In summary,
+reconstructs them for the proof assistant. In short,
 this is how the interface works. When the user is trying 
 to prove something in Isabelle, they may have the 
 subgoal of proving a formula $F$, that is to show that 
@@ -1162,13 +1104,15 @@ where the proof is reconstructed.
 \subsection{Differences and Similarities}
 All three papers discuss the proof production systems of 
 DPLL(T)-based SMT-solvers. Sections \ref{sec:prelim} to 
-\ref{sec:proofs} essentially explain the concepts that 
+\ref{sec:proofs} explain the concepts that 
 these systems have in common - the DPLL(T) algorithm and 
 resolution-based proofs. Each paper does take a different
 approach in explaining this concept. This report borrows 
-the formalizations of these concepts from 
-~\cite{DBLP:conf/fmcad/KatzBTRH16} which seemed to 
-do the best job of elaboration with examples.
+the formalizations of these concepts 
+from~\cite{DBLP:conf/fmcad/KatzBTRH16} which seemed to 
+do the best job of elaboration with examples. The following
+discuss some particular points of comparison between the 
+papers.
 
 \textit{Eager vs Lazy Proof Production.} CVC4 introduces 
 the idea of lazy proof production in the paper, and argues 
@@ -1187,7 +1131,7 @@ to CNF; the CNF clauses, the learned clauses, and the
 theory lemmas constitute the leaves of the proof tree.
 While the input clauses are axioms, the learned clauses 
 are entailed by the input formula and this entailment is
-proven by a separate resolution tree fro each clause. 
+proven by a separate resolution tree for each clause. 
 Theory clauses are produced by theory solvers which 
 also provide the proofs for these clauses. The advantage 
 of fine-grained proofs is that they are complete, and 
@@ -1204,13 +1148,13 @@ taking a slightly coarse-grained approach as well, since
 they produce proof hints to the proof assistant to 
 help it reconstruct the proof. However, this was aimed 
 at a particular application, and papers published by 
-the VeriT group seem to have fine-grained proofs 
-~\cite{DBLP:conf/cade/BarbosaBF17}.
+the VeriT group seem to have fine-grained 
+proofs~\cite{DBLP:conf/cade/BarbosaBF17}.
 
 \textit{Rewriting.} Formula rewriting is an aspect 
 of SMT solving that wasn't mentioned in this work 
 so far. Apart from conversion to a normal form, 
-theory solves rewrite simple truths in the formula.
+theory solvers rewrite simple truths in the formula.
 For example, $x + 0$ could be rewritten to $x$. 
 Because of how solvers work to combine multiple 
 theory solvers, these rewrites might complicate 
@@ -1231,7 +1175,7 @@ in the proofs - they are axiomatized and the proof
 checker is expected to prove them.
 
 \textit{Proof Format.} Although these papers don't 
-talk about the formats of their proofs, these solvers
+talk about the formats of the solvers' proofs, these solvers
 have other publications that explain in detail their 
 proof format. CVC4 outputs proofs in the LFSC 
 (Logical Framework with Side Conditions) format 
@@ -1248,7 +1192,7 @@ constants and functions in the theories, along
 with the proof rules. In~\cite{Besson2011AFP}, the 
 developers of VeriT proposed a proof format that 
 motivated by SMTLib, a standard syntax for 
-SMT solvers~\cite{BarFT-SMTLIB} which it 
+SMT solvers~\cite{BarFT-SMTLIB}, which it 
 currently uses. To the best of my knowledge, Z3 
 doesn't have a paper describing its proof format, 
 but it does have its own proof format. Even though 
@@ -1257,7 +1201,6 @@ input format in SMTLib, the same can't be said for
 a proof format, as explained in~\cite{Fontaine2014ProofsIS}.
 
 
-Proof production in theories - proof by contradiction.
 \section{Conclusion and Moving Forward}
 \label{sec:conc}
 In this report, I have tried to summarize my investigation
